@@ -5,3 +5,4 @@ flask_sqlalchemy
 flask_migrate
 flask-bcrypt
 flask-jwt-extended
+gunicorn
