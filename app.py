@@ -1,17 +1,19 @@
-import os
-import psycopg2
-from dotenv import load_dotenv
+# import os
+# import psycopg2
+# from dotenv import load_dotenv
+# from flask import Flask, jsonify, request
+# from flask_sqlalchemy import SQLAlchemy
+# from flask_migrate import Migrate
+# from flask_bcrypt import Bcrypt
+# from flask_jwt_extended import JWTManager, create_access_token
+# # from models.user import User
 from flask import Flask, jsonify
-from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
-from flask_bcrypt import Bcrypt
-from flask_jwt_extended import JWTManager
+import os
+from extensions import db, migrate, bcrypt, jwt
+from dotenv import load_dotenv
 
 load_dotenv()
-db = SQLAlchemy()
-migrate = Migrate()
-bcrypt = Bcrypt()
-jwt = JWTManager()
+# jwt = JWTManager()
 
 def create_app():
     app = Flask(__name__)
