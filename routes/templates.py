@@ -6,7 +6,7 @@ from models.user import User
 
 templates_bp = Blueprint("templates", __name__)
 
-@templates_bp.get('/templates')
+@templates_bp.get('/')
 @jwt_required()
 def get_templates():
     #Get current user
