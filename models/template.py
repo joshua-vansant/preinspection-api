@@ -9,7 +9,7 @@ class Template(db.Model):
     name = db.Column(db.String(100), nullable=False)
     created_by = db.Column(db.Integer, db.ForeignKey('inspection_app.user.id'), nullable=False)
     items = db.relationship('TemplateItem', backref='template', cascade="all, delete-orphan")
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_default = db.Column(db.Boolean, default=False)
 
     # def to_dict(self):
