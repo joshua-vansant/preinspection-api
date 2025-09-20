@@ -36,3 +36,17 @@ def submit_inspection():
         "results": inspection_record.results,
         "created_at": inspection_record.created_at
     }), 201
+
+@inspections_bp.get('/history/driver/<id>')
+@jwt_required()
+def get_inspection_history():
+    driver_id = get_jwt_identity()
+    inspections = InspectionResult.query.filter_by(driver_id=driver_id).all()
+
+    return jsonify([{
+        "id": inspection.id,
+        "driver_id": inspection.driver_id,
+        "template_id": inspection.template_id,
+        "results": inspection.results,
+        "created_at": inspection.created_at.isoformat()
+    } for inspection in inspections]), 200
