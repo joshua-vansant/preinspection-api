@@ -2,7 +2,7 @@ from flask import Flask, jsonify, request
 import os
 from extensions import db, migrate, bcrypt, jwt
 from dotenv import load_dotenv
-from flask_jwt_extended import create_access_token, jwt_required
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from models.user import User
 from models.template import Template
 from models.inspection_results import InspectionResult
