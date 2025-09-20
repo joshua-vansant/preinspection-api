@@ -64,7 +64,9 @@ def create_app():
         if not user or not bcrypt.check_password_hash(user.password_hash, password):
             return jsonify({"error": "Invalid credentials"}), 401
 
+        print("user.id type before:", type(user.id))
         access_token = create_access_token(identity={"id": str(user.id), "role": user.role})
+        print("user.id type after:", type(user.id))
         return jsonify({"access_token": access_token}), 200
 
     @app.get('/templates')
