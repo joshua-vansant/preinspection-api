@@ -86,9 +86,9 @@ def create_app():
         templates = Template.query.filter(Template.is_default == True).all()
 
         #If user is in an org, get org templates
-        if user.org_id:
-            org_templates = Template.query.filter(Template.created_by == user.org_id).all()
-            templates.extend(org_templates)
+        # if user.org_id:
+        #     org_templates = Template.query.filter(Template.created_by == user.org_id).all()
+        #     templates.extend(org_templates)
 
         #Serialize templates
         templates_data = []
