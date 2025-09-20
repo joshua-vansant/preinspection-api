@@ -2,6 +2,7 @@ from flask import Flask, jsonify, request
 from extensions import db, migrate, bcrypt, jwt
 from routes.auth import auth_bp
 from routes.templates import templates_bp
+from routes.inspections import inspections_bp
 from dotenv import load_dotenv
 import os
 
