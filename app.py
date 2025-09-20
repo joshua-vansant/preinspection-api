@@ -65,7 +65,8 @@ def create_app():
             return jsonify({"error": "Invalid credentials"}), 401
 
         print("user.id type before:", type(user.id))
-        access_token = create_access_token(identity={"id": str(user.id), "role": user.role})
+        # access_token = create_access_token(identity={"id": str(user.id), "role": user.role})
+        access_token = create_access_token(identity=str(user.id), additional_claims={"role": user.role})
         print("user.id type after:", type(user.id))
         return jsonify({"access_token": access_token}), 200
 
