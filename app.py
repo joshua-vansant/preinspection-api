@@ -67,28 +67,37 @@ def create_app():
         access_token = create_access_token(identity={"id": user.id, "role": user.role})
         return jsonify({"access_token": access_token}), 200
 
-    @app.get('/inspection_results')
-    def get_inspection_results():
-        results = InspectionResult.query.all()
-        return jsonify([result.to_dict() for result in results]), 200
+    @app.get('/templates')
+    @jwt.required()
+    def get_templates():
+        #Get current user
+        current_user_id = jwt.get_jwt_identity()
+        user = User.query.get(current_user_id)
 
-    @app.post('/inspection_results')
-    def create_inspection_result():
-        data = request.get_json()
-        driver_id = data.get('driver_id')
-        template_id = data.get('template_id')
-        results = data.get('results')
+        if not user:
+            return jsonify({"error": "User not found"}), 404
 
-        if not driver_id or not template_id or not results:
-            return jsonify({"error": "Driver ID, template ID, and results are required"}), 400
+        #Always fetch the default template
+        templates = Template.query.filter(Template.is_default == True).all()
 
-        new_result = InspectionResult(driver_id=driver_id, template_id=template_id, results=results)
-        db.session.add(new_result)
-        db.session.commit()
+        #If user is in an org, get org templates
+        if user.org_id:
+            org_templates = Template.query.filter(Template.created_by == user.org_id).all()
+            templates.extend(org_templates)
 
-        return jsonify({"message": "Inspection result created successfully"}), 201
+        #Serialize templates
+        templates_data = []
+        for template in templates:
+            items = TemplateItem.query.filter_by(template_id=template.id).all()
+            templates_data.append({
+                "id": template.id,
+                "name": template.name,
+                "created_by": template.created_by,
+                "created_at": template.created_at,
+                "is_default": template.is_default,
+                "items": [{"id": item.id, "name": item.name, "question": item.question} for item in items]
+            })
 
-
-    return app
+    return jsonify(templates_data), 200
 
 app = create_app()
