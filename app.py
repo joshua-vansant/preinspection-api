@@ -4,6 +4,9 @@ from extensions import db, migrate, bcrypt, jwt
 from dotenv import load_dotenv
 from flask_jwt_extended import create_access_token
 from models.user import User
+from models.template import Template
+from models.inspection_results import InspectionResult
+from models.template_item import TemplateItem
 
 load_dotenv()
 # jwt = JWTManager()
@@ -63,7 +66,29 @@ def create_app():
 
         access_token = create_access_token(identity={"id": user.id, "role": user.role})
         return jsonify({"access_token": access_token}), 200
-    
+
+    @app.get('/inspection_results')
+    def get_inspection_results():
+        results = InspectionResult.query.all()
+        return jsonify([result.to_dict() for result in results]), 200
+
+    @app.post('/inspection_results')
+    def create_inspection_result():
+        data = request.get_json()
+        driver_id = data.get('driver_id')
+        template_id = data.get('template_id')
+        results = data.get('results')
+
+        if not driver_id or not template_id or not results:
+            return jsonify({"error": "Driver ID, template ID, and results are required"}), 400
+
+        new_result = InspectionResult(driver_id=driver_id, template_id=template_id, results=results)
+        db.session.add(new_result)
+        db.session.commit()
+
+        return jsonify({"message": "Inspection result created successfully"}), 201
+
+
     return app
 
 app = create_app()
