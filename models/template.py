@@ -16,5 +16,8 @@ class Template(db.Model):
     #     return {
     #         "id": self.id,
     #         "name": self.name,
-    #         "description": self.description
+    #         "created_by": self.created_by,
+    #         "items": [item.to_dict() for item in self.items],
+    #         "created_at": self.created_at,
+    #         "is_default": self.is_default
     #     }

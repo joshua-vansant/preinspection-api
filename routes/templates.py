@@ -9,8 +9,6 @@ templates_bp = Blueprint("templates", __name__)
 @templates_bp.get('/')
 @jwt_required()
 def get_templates():
-    #Get current user
-    # current_user_id = jwt.get_jwt_identity()
     current_user_id = get_jwt_identity()  
     user = User.query.get(current_user_id)
 
@@ -25,7 +23,6 @@ def get_templates():
     #     org_templates = Template.query.filter(Template.created_by == user.org_id).all()
     #     templates.extend(org_templates)
 
-    #Serialize templates
     templates_data = []
     for template in templates:
         items = TemplateItem.query.filter_by(template_id=template.id).all()
