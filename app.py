@@ -3,6 +3,7 @@ import os
 from extensions import db, migrate, bcrypt, jwt
 from dotenv import load_dotenv
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+
 from models.user import User
 from models.template import Template
 from models.inspection_results import InspectionResult
@@ -74,7 +75,8 @@ def create_app():
     @jwt_required()
     def get_templates():
         #Get current user
-        current_user_id = jwt.get_jwt_identity()
+        # current_user_id = jwt.get_jwt_identity()
+        current_user_id = get_jwt_identity()  
         user = User.query.get(current_user_id)
 
         if not user:
