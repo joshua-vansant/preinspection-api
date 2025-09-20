@@ -2,7 +2,7 @@ from flask import Flask, jsonify, request
 import os
 from extensions import db, migrate, bcrypt, jwt
 from dotenv import load_dotenv
-from flask_jwt_extended import create_access_token
+from flask_jwt_extended import create_access_token, jwt_required
 from models.user import User
 from models.template import Template
 from models.inspection_results import InspectionResult
@@ -68,7 +68,7 @@ def create_app():
         return jsonify({"access_token": access_token}), 200
 
     @app.get('/templates')
-    @jwt.required()
+    @jwt_required()
     def get_templates():
         #Get current user
         current_user_id = jwt.get_jwt_identity()
@@ -98,6 +98,7 @@ def create_app():
                 "items": [{"id": item.id, "name": item.name, "question": item.question} for item in items]
             })
 
-    return jsonify(templates_data), 200
+        return jsonify(templates_data), 200
 
+    return app
 app = create_app()
