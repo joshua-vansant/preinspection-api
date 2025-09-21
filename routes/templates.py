@@ -19,9 +19,9 @@ def get_templates():
     templates = Template.query.filter(Template.is_default == True).all()
 
     #If user is in an org, get org templates
-    # if user.org_id:
-    #     org_templates = Template.query.filter(Template.created_by == user.org_id).all()
-    #     templates.extend(org_templates)
+    if user.org_id:
+        org_templates = Template.query.filter(Template.created_by == user.org_id).all()
+        templates.extend(org_templates)
 
     templates_data = []
     for template in templates:

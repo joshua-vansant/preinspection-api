@@ -48,8 +48,9 @@ def get_inspection_history():
         # Driver can only see their own inspections
         inspections = InspectionResult.query.filter_by(driver_id=user_id).all()
     elif role == "admin":
-        # Admin can see all inspections
-        inspections = InspectionResult.query.all()
+        # get all users in this admin's org
+        org_driver_ids = [u.id for u in User.query.filter_by(org_id=user.org_id).all()]
+        inspections = InspectionResult.query.filter(InspectionResult.driver_id.in_(org_driver_ids)).all()
     else:
         return jsonify({"error": "Unauthorized role"}), 403
 

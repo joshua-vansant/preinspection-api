@@ -10,6 +10,7 @@ class User(db.Model):
     password_hash = db.Column(db.String(128), nullable=False)
     role = db.Column(db.String(20), default="driver")  # roles: driver, admin
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    org_id = db.Column(db.Integer, db.ForeignKey('inspection_app.organizations.id'), nullable=True)
 
     def __repr__(self):
         return f'<User {self.email}>'

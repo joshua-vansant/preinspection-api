@@ -3,6 +3,7 @@ from extensions import db, migrate, bcrypt, jwt
 from routes.auth import auth_bp
 from routes.templates import templates_bp
 from routes.inspections import inspections_bp
+from models.organization import Organization
 from dotenv import load_dotenv
 import os
 
