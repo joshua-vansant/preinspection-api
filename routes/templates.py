@@ -4,6 +4,7 @@ from models.template import Template
 from models.template_item import TemplateItem
 from models.user import User
 from extensions import db
+from sqlalchemy import or_
 
 templates_bp = Blueprint("templates", __name__)
 
@@ -16,13 +17,17 @@ def get_templates():
     if not user:
         return jsonify({"error": "User not found"}), 404
 
-    #Always fetch the default template
-    templates = Template.query.filter(Template.is_default == True).all()
-
-    #If user is in an org, get org templates
-    if user.org_id:
-        org_templates = Template.query.filter(Template.created_by == user.org_id).all()
-        templates.extend(org_templates)
+    templates = (
+        Template.query
+        .filter(
+            or_(
+                Template.is_default == True,
+                Template.org_id == user.org_id
+            )
+        )
+        .distinct()
+        .all()
+    )
 
     templates_data = []
     for template in templates:
@@ -34,7 +39,10 @@ def get_templates():
             "org_id": template.org_id,
             "created_at": template.created_at,
             "is_default": template.is_default,
-            "items": [{"id": item.id, "name": item.name, "question": item.question} for item in items]
+            "items": [
+                {"id": item.id, "name": item.name, "question": item.question}
+                for item in items
+            ]
         })
 
     return jsonify(templates_data), 200
@@ -52,25 +60,31 @@ def create_template():
         return jsonify({"error": "Only admins can create templates"}), 403
 
     data = request.get_json()
-    name = data.get('name')
-    created_by = current_user_id
-    org_id = user.org_id if 'org_id' in data else None
-    items_data = data.get('items', [])
-    created_at = data.get('created_at')
-    is_default = data.get('is_default', False)
+    name = data.get("name")
+    items_data = data.get("items", [])
+    is_default = data.get("is_default", False)
 
     if not name:
         return jsonify({"error": "Name is required"}), 400
 
-    new_template = Template(name=name, created_by=created_by, org_id=org_id, created_at=created_at, is_default=is_default)
-    db.session.add(new_template)
-    db.session.flush()  # Flush to get the new template ID
+    for item in items_data:
+        if not item.get("name") or not item.get("question"):
+            return jsonify({"error": "Each item requires a name and question"}), 400
 
-    # Create TemplateItem records
+    new_template = Template(
+        name=name,
+        created_by=current_user_id,
+        org_id=user.org_id,
+        created_at=db.func.now(),
+        is_default=is_default
+    )
+    db.session.add(new_template)
+    db.session.flush()  # to get new_template.id
+
     for item in items_data:
         new_item = TemplateItem(
-            name=item.get("name"),
-            question=item.get("question"),
+            name=item["name"],
+            question=item["question"],
             template_id=new_template.id
         )
         db.session.add(new_item)
