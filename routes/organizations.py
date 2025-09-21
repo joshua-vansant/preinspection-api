@@ -47,3 +47,40 @@ def join_organization():
     db.session.commit()
 
     return jsonify({"message": f"Driver {user.id} successfully joined {org.name}"}), 200
+    
+
+@organizations_bp.post("/create")
+@jwt_required()
+def create_organization():
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+
+    if not user or user.role != "admin":
+        return jsonify({"error": "Only admins can create organizations"}), 403
+
+    if user.org_id:
+        return jsonify({"error": "User already belongs to an organization"}), 400
+
+    data = request.get_json()
+    name = data.get("name")
+
+    if not name:
+        return jsonify({"error": "Organization name is required"}), 400
+
+    new_org = Organization(
+        name=name,
+        admin_id=user.id
+    )
+
+    db.session.add(new_org)
+    db.session.commit()
+
+    # Assign org_id to admin
+    user.org_id = new_org.id
+    db.session.commit()
+
+    return jsonify({
+        "message": "Organization created successfully",
+        "id": new_org.id,
+        "invite_code": new_org.invite_code
+    }), 201
