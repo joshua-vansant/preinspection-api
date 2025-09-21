@@ -28,6 +28,7 @@ def create_app():
     app.register_blueprint(templates_bp, url_prefix="/templates")
     app.register_blueprint(inspections_bp, url_prefix="/inspections")
     app.register_blueprint(organizations_bp, url_prefix="/organizations")
+    app.register_blueprint(admins_bp, url_prefix="/admins")
     
     
     @app.get('/')
