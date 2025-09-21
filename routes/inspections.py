@@ -39,7 +39,7 @@ def submit_inspection():
 
 @inspections_bp.get('/history/driver/<id>')
 @jwt_required()
-def get_inspection_history():
+def get_inspection_history(id):
     driver_id = get_jwt_identity()
     inspections = InspectionResult.query.filter_by(driver_id=driver_id).all()
 
