@@ -41,7 +41,7 @@ def submit_inspection():
 @jwt_required()
 def get_inspection_history(id):
     driver_id = get_jwt_identity()
-    inspections = InspectionResult.query.filter_by(driver_id=driver_id).all()
+    inspections = InspectionResult.query.filter_by(driver_id=id).all()
 
     return jsonify([{
         "id": inspection.id,
