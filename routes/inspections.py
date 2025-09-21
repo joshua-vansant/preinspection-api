@@ -37,11 +37,21 @@ def submit_inspection():
         "created_at": inspection_record.created_at
     }), 201
 
-@inspections_bp.get('/history/driver/<id>')
+@inspections_bp.get('/history')
 @jwt_required()
 def get_inspection_history(id):
-    driver_id = get_jwt_identity()
-    inspections = InspectionResult.query.filter_by(driver_id=id).all()
+    claims = get_jwt()
+    role = claims.get("role")
+    user_id = get_jwt_identity()
+
+    if role == "driver":
+        # Driver can only see their own inspections
+        inspections = InspectionResult.query.filter_by(driver_id=user_id).all()
+    elif role == "admin":
+        # Admin can see all inspections
+        inspections = InspectionResult.query.all()
+    else:
+        return jsonify({"error": "Unauthorized role"}), 403
 
     return jsonify([{
         "id": inspection.id,
