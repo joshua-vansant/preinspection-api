@@ -23,6 +23,7 @@ def get_organization_code():
 
     return jsonify({"invite_code": org.invite_code}), 200
 
+
 @organizations_bp.post('/code/regenerate')
 @jwt_required()
 def regenerate_org_code():
@@ -112,6 +113,7 @@ def create_organization():
         "invite_code": new_org.invite_code
     }), 201
 
+
 @organizations_bp.post("/remove_driver")
 @jwt_required()
 def remove_driver():
@@ -142,3 +144,27 @@ def remove_driver():
     db.session.commit()
 
     return jsonify({"message": f"Driver {driver.id} removed from organization"}), 200
+    
+
+@organizations_bp.post("/leave")
+@jwt_required()
+def leave_organization():
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    if not user.org_id:
+        return jsonify({"error": "User is not part of any organization"}), 400
+
+    if user.role == "admin":
+        admin_count = User.query.filter_by(org_id=user.org_id, role="admin").count()
+        if admin_count <= 1:
+            return jsonify({"error": "Cannot leave organization as the sole admin. Please assign another admin before leaving."}), 400
+
+    # All roles can leave
+    user.org_id = None
+    db.session.commit()
+
+    return jsonify({"message": "Successfully left the organization"}), 200

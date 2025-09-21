@@ -4,14 +4,14 @@ from extensions import db, bcrypt
 from models.user import User
 import re
 
-admin_bp = Blueprint("admin", __name__)
+admins_bp = Blueprint("admins", __name__)
 
-@admin_bp.post('/create')
+@admins_bp.post('/create')
 @jwt_required()
 def create_admin():
     current_user_id = get_jwt_identity()
     user = User.query.get(current_user_id)
-    
+
     claims = get_jwt()
     
     if claims.get("role") != "admin":
