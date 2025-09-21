@@ -39,7 +39,7 @@ def submit_inspection():
 
 @inspections_bp.get('/history')
 @jwt_required()
-def get_inspection_history(id):
+def get_inspection_history():
     claims = get_jwt()
     role = claims.get("role")
     user_id = get_jwt_identity()
