@@ -10,6 +10,8 @@ admin_bp = Blueprint("admin", __name__)
 @jwt_required()
 def create_admin():
     current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    
     claims = get_jwt()
     
     if claims.get("role") != "admin":
@@ -32,7 +34,7 @@ def create_admin():
         return jsonify({"error": "Email already registered"}), 400
 
     password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
-    new_admin = User(email=email, password_hash=password_hash, role="admin")
+    new_admin = User(email=email, password_hash=password_hash, org_id=user.org_id, role="admin")
 
     db.session.add(new_admin)
     db.session.commit()
