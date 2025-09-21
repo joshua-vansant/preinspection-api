@@ -3,7 +3,8 @@ from extensions import db, migrate, bcrypt, jwt
 from routes.auth import auth_bp
 from routes.templates import templates_bp
 from routes.inspections import inspections_bp
-from models.organization import Organization
+# from models.organization import Organization
+from routes.organizations import organizations_bp
 from dotenv import load_dotenv
 import os
 
@@ -26,7 +27,7 @@ def create_app():
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(templates_bp, url_prefix="/templates")
     app.register_blueprint(inspections_bp, url_prefix="/inspections")
-
+    app.register_blueprint(organizations_bp, url_prefix="/organizations")
     
     
     @app.get('/')
