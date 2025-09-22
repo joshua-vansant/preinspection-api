@@ -52,7 +52,7 @@ def login():
         return jsonify({"error": "Invalid credentials"}), 401
 
     access_token = create_access_token(identity=str(user.id), additional_claims={"role": user.role})
-    return jsonify({"access_token": access_token}), 200
+    return jsonify({"access_token": access_token, "role": user.role}), 200
 
 def is_valid_email(email: str) -> bool:
     return re.match(r"[^@]+@[^@]+\.[^@]+", email) is not None
