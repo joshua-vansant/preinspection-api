@@ -38,7 +38,8 @@ def submit_inspection():
         driver_id=driver_id,
         template_id=template_id,
         results=results,
-        created_at=db.func.now()
+        created_at=db.func.now(),
+        notes=data.get('notes')
     )
 
     db.session.add(inspection_record)
@@ -49,7 +50,8 @@ def submit_inspection():
         "driver_id": inspection_record.driver_id,
         "template_id": inspection_record.template_id,
         "results": inspection_record.results,
-        "created_at": inspection_record.created_at
+        "created_at": inspection_record.created_at,
+        "notes": inspection_record.notes
     }), 201
 
 @inspections_bp.get('/history')

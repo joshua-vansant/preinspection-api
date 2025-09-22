@@ -10,6 +10,7 @@ class InspectionResult(db.Model):
     template_id = db.Column(db.Integer, db.ForeignKey('inspection_app.templates.id'), nullable=False)
     results = db.Column(db.JSON, nullable=False)  # Store inspection results as JSON
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    notes = db.Column(db.Text, nullable=True)
 
     # def to_dict(self):
     #     return {
