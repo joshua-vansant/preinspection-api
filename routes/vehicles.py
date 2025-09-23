@@ -95,4 +95,3 @@ def delete_vehicle(vehicle_id):
     db.session.delete(vehicle)
     db.session.commit()
     return jsonify({"message": "Vehicle deleted successfully"}), 200
-    
