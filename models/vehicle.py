@@ -8,7 +8,6 @@ class Vehicle(db.Model):
     org_id = db.Column(db.Integer, db.ForeignKey('inspection_app.organizations.id'), nullable=True)
     number = db.Column(db.String(50), nullable=True)
 
-    # Optional helper to_dict
     # def to_dict(self):
     #     return {
     #         "id": self.id,

@@ -7,10 +7,17 @@ class InspectionResult(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     driver_id = db.Column(db.Integer, db.ForeignKey('inspection_app.user.id'), nullable=False)
+    vehicle_id = db.Column(db.Integer, db.ForeignKey('inspection_app.vehicles.id'), nullable=False)
     template_id = db.Column(db.Integer, db.ForeignKey('inspection_app.templates.id'), nullable=False)
-    results = db.Column(db.JSON, nullable=False)  # Store inspection results as JSON
+    type = db.Column(db.String(50), nullable=False)  # "pre-trip", "post-trip"
+    results = db.Column(db.JSON, nullable=False) 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     notes = db.Column(db.Text, nullable=True)
+
+    @staticmethod
+    def last_for_vehicle(vehicle_id):
+        return InspectionResult.query.filter_by(vehicle_id=vehicle_id).order_by(InspectionResult.created_at.desc()).first()
+
 
     # def to_dict(self):
     #     return {

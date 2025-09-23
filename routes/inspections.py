@@ -12,11 +12,14 @@ inspections_bp = Blueprint("inspections", __name__)
 def submit_inspection():
     data = request.get_json()
     driver_id = get_jwt_identity()
-    # driver_id = data.get('driver_id')
     template_id = data.get('template_id')
+    vehicle_id = data.get('vehicle_id')
+    inspection_type = data.get('type')  # 'pre' or 'post'
     results = data.get('results')
-    if not template_id or not results:
-        return jsonify({"error": "template_id and results are required"}), 400
+    notes = data.get('notes')
+
+    if not template_id or not results or not vehicle_id or not inspection_type:
+        return jsonify({"error": "template_id, vehicle_id, type, and results are required"}), 400
 
     if not isinstance(results, dict):
         return jsonify({"error": "results must be a JSON object"}), 400
@@ -33,26 +36,51 @@ def submit_inspection():
     if driver.org_id != template.org_id:
         return jsonify({"error": "Template does not belong to your organization"}), 403
 
+    # For post-inspections, fetch last inspection on the vehicle
+    previous_data = {}
+    if inspection_type == 'post':
+        last_inspection = (
+            InspectionResult.query
+            .filter_by(vehicle_id=vehicle_id)
+            .order_by(InspectionResult.created_at.desc())
+            .first()
+        )
+        if last_inspection:
+            previous_data = {
+                "gas_level": last_inspection.results.get("gas_level"),
+                "odometer": last_inspection.results.get("odometer")
+            }
 
+    # Create the inspection record
     inspection_record = InspectionResult(
         driver_id=driver_id,
+        vehicle_id=vehicle_id,
         template_id=template_id,
+        type=inspection_type,
         results=results,
         created_at=db.func.now(),
-        notes=data.get('notes')
+        notes=notes
     )
 
     db.session.add(inspection_record)
     db.session.commit()
 
-    return jsonify({
+    response = {
         "id": inspection_record.id,
         "driver_id": inspection_record.driver_id,
+        "vehicle_id": inspection_record.vehicle_id,
         "template_id": inspection_record.template_id,
+        "type": inspection_record.type,
         "results": inspection_record.results,
         "created_at": inspection_record.created_at,
         "notes": inspection_record.notes
-    }), 201
+    }
+
+    if previous_data:
+        response["previous"] = previous_data
+
+    return jsonify(response), 201
+
 
 @inspections_bp.get('/history')
 @jwt_required()
