@@ -8,7 +8,7 @@ class Organization(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
-    admin_id = db.Column(db.Integer, db.ForeignKey('inspection_app.user.id'), nullable=False)
+    admin_id = db.Column(db.Integer, db.ForeignKey('inspection_app.user.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     invite_code = db.Column(db.String(50), unique=True, nullable=False, default=lambda: str(uuid.uuid4())[:8])
 

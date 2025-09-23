@@ -5,7 +5,9 @@ from routes.templates import templates_bp
 from routes.inspections import inspections_bp
 from routes.admins import admins_bp
 from routes.organizations import organizations_bp
+from routes.vehicles import vehicles_bp
 from dotenv import load_dotenv
+# from models import *
 import os
 
 load_dotenv()
@@ -29,6 +31,7 @@ def create_app():
     app.register_blueprint(inspections_bp, url_prefix="/inspections")
     app.register_blueprint(organizations_bp, url_prefix="/organizations")
     app.register_blueprint(admins_bp, url_prefix="/admins")
+    app.register_blueprint(vehicles_bp, url_prefix="/vehicles")
     
     
     @app.get('/')

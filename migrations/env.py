@@ -100,8 +100,6 @@ def run_migrations_online():
         context.configure(
             connection=connection,
             target_metadata=get_metadata(),
-            version_table_schema="inspection_app",
-            include_schemas=True,
             **conf_args
         )
 
