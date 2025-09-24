@@ -74,7 +74,7 @@ def submit_inspection():
         "template_id": inspection_record.template_id,
         "type": inspection_record.type,
         "results": inspection_record.results,
-        "created_at": inspection_record.created_at.isoformat() +"Z",
+        "created_at": inspection_record.created_at.astimezone(timezone.utc).isoformat(),
         "notes": inspection_record.notes
     }
 
