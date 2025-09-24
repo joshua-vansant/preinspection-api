@@ -5,7 +5,7 @@ from models.template import Template
 from models.vehicle import Vehicle
 from extensions import db, bcrypt
 from models.user import User
-from datetime import datetime
+from datetime import datetime, timezone
 
 inspections_bp = Blueprint("inspections", __name__)
 

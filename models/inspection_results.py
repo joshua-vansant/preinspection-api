@@ -1,5 +1,5 @@
 from extensions import db
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.sql import func
 
 class InspectionResult(db.Model):
