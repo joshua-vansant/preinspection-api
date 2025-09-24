@@ -60,7 +60,7 @@ def submit_inspection():
         template_id=template_id,
         type=inspection_type,
         results=results,
-        created_at=db.func.now(),
+        created_at=datetime.now(timezone.utc),
         notes=notes
     )
 
@@ -74,7 +74,7 @@ def submit_inspection():
         "template_id": inspection_record.template_id,
         "type": inspection_record.type,
         "results": inspection_record.results,
-        "created_at": inspection_record.created_at,
+        "created_at": inspection_record.created_at.isoformat(),
         "notes": inspection_record.notes
     }
 
