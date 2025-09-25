@@ -115,6 +115,44 @@ def get_inspection_history():
         "created_at": inspection.created_at.isoformat()
     } for inspection in inspections]), 200
 
+
+@inspections_bp.get('/<int:inspection_id>')
+@jwt_required()
+def get_inspection(inspection_id):
+    inspection = InspectionResult.query.get(inspection_id)
+    if not inspection:
+        return jsonify({"error": "Inspection not found"}), 404
+
+    template = Template.query.get(inspection.template_id)
+    if not template:
+        return jsonify({"error": "Template not found"}), 404
+
+    response = {
+        "id": inspection.id,
+        "driver_id": inspection.driver_id,
+        "vehicle_id": inspection.vehicle_id,
+        "template_id": inspection.template_id,
+        "type": inspection.type,  # <-- inspection type belongs here
+        "results": inspection.results,
+        "created_at": inspection.created_at.isoformat(),
+        "notes": inspection.notes,
+        "template": {
+            "id": template.id,
+            "name": template.name,
+            "org_id": template.org_id,
+            "items": [
+                {
+                    "id": i.id,
+                    "name": i.name,
+                    "question": i.question,
+                }
+                for i in template.items
+            ]
+        }
+    }
+
+    return jsonify(response), 200
+
     
 @inspections_bp.get('/last/<int:vehicle_id>')
 @jwt_required()
