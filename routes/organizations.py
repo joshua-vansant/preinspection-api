@@ -24,6 +24,25 @@ def get_organization_code():
     return jsonify({"invite_code": org.invite_code}), 200
 
 
+@organizations_bp.get('/me')
+@jwt_required()
+def get_my_organization():
+    user = User.query.get(get_jwt_identity())
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    if not user.org_id:
+        return jsonify({"error": "User does not belong to any organization"}), 404
+
+    org = Organization.query.get(user.org_id)
+    if not org:
+        return jsonify({"error": "Organization not found"}), 404
+
+    return jsonify({
+        "id": org.id,
+        "name": org.name
+    }), 200
+
 @organizations_bp.post('/code/regenerate')
 @jwt_required()
 def regenerate_org_code():
