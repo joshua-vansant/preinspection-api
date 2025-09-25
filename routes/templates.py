@@ -136,3 +136,30 @@ def edit_template(template_id):
     db.session.commit()
 
     return jsonify({"message": "Template updated successfully"}), 200
+
+
+@templates_bp.delete('/<int:template_id>/delete')
+@jwt_required()
+def delete_template(template_id):
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+
+    claims = get_jwt()
+    role = claims.get("role")
+    if role != "admin":
+        return jsonify({"error": "Only admins can delete templates"}), 403
+
+    template = Template.query.get(template_id)
+    if not template or template.org_id != user.org_id:
+        return jsonify({"error": "Template not found"}), 404
+
+    if template.is_default:
+        return jsonify({"error": "Default templates cannot be deleted"}), 400
+
+    # Delete related items first
+    TemplateItem.query.filter_by(template_id=template.id).delete()
+
+    db.session.delete(template)
+    db.session.commit()
+
+    return jsonify({"message": "Template deleted successfully"}), 200
