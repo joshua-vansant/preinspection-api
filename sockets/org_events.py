@@ -13,3 +13,10 @@ def notify_driver_joined(org_id, driver_data):
         "email": driver_data.email
     }
     socketio.emit("driver_joined", driver_data, room=f"org_{org_id}")
+
+def notify_driver_left(org_id, driver):
+    data = {
+        "id": driver.id,
+        "email": driver.email
+    }
+    socketio.emit("driver_left", data, room=f"org_{org_id}")

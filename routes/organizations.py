@@ -177,12 +177,12 @@ def remove_driver():
     if driver.org_id != user.org_id:
         return jsonify({"error": "Driver does not belong to your organization"}), 403
     
-    if driver.id == user.id: #future proofing - admins might be able to be drivers eventually
+    if driver.id == user.id:
         return jsonify({"error": "Admins cannot remove themselves"}), 400
 
 
     driver.org_id = None
-    db.session.commit()
+    notify_driver_left(user.org_id, user)
 
     return jsonify({"message": f"Driver {driver.id} removed from organization"}), 200
     
@@ -208,4 +208,6 @@ def leave_organization():
     user.org_id = None
     db.session.commit()
 
+    notify_driver_left(user.org_id, user)
+    
     return jsonify({"message": "Successfully left the organization"}), 200

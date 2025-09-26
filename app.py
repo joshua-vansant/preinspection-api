@@ -11,18 +11,17 @@ from routes.vehicles import vehicles_bp
 from dotenv import load_dotenv
 from sockets import org_events
 import os
+from routes.users import users_bp
 
 load_dotenv()
 
 def create_app():
     app = Flask(__name__)
     
-    # Load configuration from environment variables
     app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
     
-    # Initialize extensions
     db.init_app(app)
     migrate.init_app(app, db)
     bcrypt.init_app(app)
@@ -35,7 +34,7 @@ def create_app():
     app.register_blueprint(organizations_bp, url_prefix="/organizations")
     app.register_blueprint(admins_bp, url_prefix="/admins")
     app.register_blueprint(vehicles_bp, url_prefix="/vehicles")
-    
+    app.register_blueprint(users_bp, url_prefix="/users")
     
     @app.get('/')
     def index():
@@ -47,5 +46,4 @@ def create_app():
 app = create_app()
 
 if __name__ == "__main__":
-    # app = create_app()
     socketio.run(app, host="0.0.0.0", port=5000)
