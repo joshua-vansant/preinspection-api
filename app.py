@@ -1,3 +1,5 @@
+import eventlet
+eventlet.monkey_patch()
 from flask import Flask, jsonify, request
 from extensions import db, migrate, bcrypt, jwt, socketio
 from routes.auth import auth_bp
