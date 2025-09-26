@@ -101,7 +101,7 @@ def join_organization():
         return jsonify({"error": "Invite code not found"}), 404
 
     user.org_id = org.id
-    notify_driver_joined(user.org_id, driver_data)
+    notify_driver_joined(user.org_id, user)
     db.session.commit()
 
     return jsonify({

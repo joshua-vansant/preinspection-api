@@ -8,4 +8,8 @@ def handle_join_org(data):
     print(f"Client joined org {org_id}")
 
 def notify_driver_joined(org_id, driver_data):
+    driver_data = {
+        "id": driver_data.id,
+        "email": driver_data.email
+    }
     socketio.emit("driver_joined", driver_data, room=f"org_{org_id}")
