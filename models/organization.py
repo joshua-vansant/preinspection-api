@@ -11,12 +11,21 @@ class Organization(db.Model):
     admin_id = db.Column(db.Integer, db.ForeignKey('inspection_app.user.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     invite_code = db.Column(db.String(50), unique=True, nullable=False, default=lambda: str(uuid.uuid4())[:8])
+    address = db.Column(db.String(255), nullable=True)
+    phone_number = db.Column(db.String(20), nullable=True)
+    contact_name = db.Column(db.String(100), nullable=True)
+    updated_at = db.Column(db.DateTime, onupdate=datetime.utcnow)
 
-    # def to_dict(self):
-    #     return {
-    #         'id': self.id,
-    #         'name': self.name,
-    #         'address': self.address,
-    #         'created_at': self.created_at,
-    #         'updated_at': self.updated_at
-    #     }
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "admin_id": self.admin_id,
+            "address": self.address,
+            "phone_number": self.phone_number,
+            "contact_name": self.contact_name,
+            "invite_code": self.invite_code,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None
+        }
+

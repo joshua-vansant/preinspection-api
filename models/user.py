@@ -10,7 +10,21 @@ class User(db.Model):
     password_hash = db.Column(db.String(128), nullable=False)
     role = db.Column(db.String(20), default="driver")  # roles: driver, admin
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow)
     org_id = db.Column(db.Integer, db.ForeignKey('inspection_app.organizations.id'), nullable=True)
+    first_name = db.Column(db.String(30), nullable=False)
+    last_name = db.Column(db.String(30), nullable=False)
+    phone_number = db.Column(db.String(15), nullable=True)
 
-    def __repr__(self):
-        return f'<User {self.email}>'
+    def to_dict(self):
+        return {
+        "id": self.id,
+        "email": self.email,
+        "first_name": self.first_name,
+        "last_name": self.last_name,
+        "phone_number": self.phone_number,
+        "role": self.role,
+        "org_id": self.org_id,
+        "created_at": self.created_at.isoformat() if self.created_at else None,
+        "updated_at": self.updated_at.isoformat() if self.updated_at else None
+    }

@@ -11,9 +11,8 @@ admins_bp = Blueprint("admins", __name__)
 def create_admin():
     current_user_id = get_jwt_identity()
     user = User.query.get(current_user_id)
-
     claims = get_jwt()
-    
+
     if claims.get("role") != "admin":
         return jsonify({"error": "Only admins can create new admins"}), 403
 
@@ -41,9 +40,9 @@ def create_admin():
 
     return jsonify({
         "message": "Admin user created successfully",
-        "id": new_admin.id,
-        "role": new_admin.role
+        "user": new_admin.to_dict()
     }), 201
+
 
 def is_valid_email(email: str) -> bool:
     return re.match(r"[^@]+@[^@]+\.[^@]+", email) is not None

@@ -13,13 +13,7 @@ def get_vehicles():
     user_id = get_jwt_identity()
     user = User.query.get(user_id)
     vehicles = Vehicle.query.filter_by(org_id=user.org_id).all()
-
-    return jsonify([{
-        "id": v.id,
-        "org_id": v.org_id,
-        "number": v.number
-    } for v in vehicles]), 200
-
+    return jsonify([v.to_dict() for v in vehicles]), 200 
 
 # POST add a vehicle
 @vehicles_bp.post('/add')
@@ -43,16 +37,25 @@ def add_vehicle():
         # driver cannot set org_id, use their own org
         org_id = user.org_id
 
-    new_vehicle = Vehicle(org_id=org_id, number=number)
+    new_vehicle = Vehicle(
+        org_id=org_id,
+        number=number,
+        make=data.get("make"),
+        model=data.get("model"),
+        year=data.get("year"),
+        vin=data.get("vin"),
+        license_plate=data.get("license_plate"),
+        mileage=data.get("mileage"),
+        status=data.get("status", "active")
+    )
+
     db.session.add(new_vehicle)
     db.session.commit()
 
     return jsonify({
-        "id": new_vehicle.id,
-        "org_id": new_vehicle.org_id,
-        "number": new_vehicle.number
+        "message": "Vehicle added successfully",
+        "vehicle": new_vehicle.to_dict()
     }), 201
-
 
 # PUT/PATCH update a vehicle (admin-only)
 @vehicles_bp.put('/<int:vehicle_id>')
@@ -70,15 +73,20 @@ def update_vehicle(vehicle_id):
     data = request.get_json()
     vehicle.org_id = data.get('org_id', vehicle.org_id)
     vehicle.number = data.get('number', vehicle.number)
+    vehicle.make = data.get('make', vehicle.make)
+    vehicle.model = data.get('model', vehicle.model)
+    vehicle.year = data.get('year', vehicle.year)
+    vehicle.vin = data.get('vin', vehicle.vin)
+    vehicle.license_plate = data.get('license_plate', vehicle.license_plate)
+    vehicle.mileage = data.get('mileage', vehicle.mileage)
+    vehicle.status = data.get('status', vehicle.status)
 
     db.session.commit()
 
     return jsonify({
-        "id": vehicle.id,
-        "org_id": vehicle.org_id,
-        "number": vehicle.number
+        "message": "Vehicle updated successfully",
+        "vehicle": vehicle.to_dict() 
     }), 200
-
 
 # DELETE a vehicle (admin-only)
 @vehicles_bp.delete('/<int:vehicle_id>')

@@ -11,11 +11,7 @@ def get_user(user_id):
     user = User.query.get(user_id)
     if not user:
         return jsonify({"error": "User not found"}), 404
-    return jsonify({
-        "id": user.id,
-        "email": user.email,
-        "role": user.role
-    })
+    return jsonify(user.to_dict())
 
 @users_bp.put("/update")
 @jwt_required()
@@ -28,14 +24,15 @@ def update_user():
 
     data = request.get_json()
     user.email = data.get("email", user.email)
+    user.first_name = data.get("first_name", user.first_name)
+    user.last_name = data.get("last_name", user.last_name)
+    user.phone_number = data.get("phone_number", user.phone_number)
+    user.updated_at = db.func.now()
+
     # Don't allow role changes here
     db.session.commit()
 
     return jsonify({
         "message": "User updated successfully",
-        "user": {
-            "id": user.id,
-            "email": user.email,
-            "role": user.role
-        }
+        "user": user.to_dict()
     })
