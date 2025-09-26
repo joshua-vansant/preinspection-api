@@ -1,5 +1,5 @@
 from flask import Flask, jsonify, request
-from extensions import db, migrate, bcrypt, jwt
+from extensions import db, migrate, bcrypt, jwt, socketio
 from routes.auth import auth_bp
 from routes.templates import templates_bp
 from routes.inspections import inspections_bp
@@ -7,7 +7,7 @@ from routes.admins import admins_bp
 from routes.organizations import organizations_bp
 from routes.vehicles import vehicles_bp
 from dotenv import load_dotenv
-# from models import *
+from sockets import org_events
 import os
 
 load_dotenv()
@@ -25,6 +25,7 @@ def create_app():
     migrate.init_app(app, db)
     bcrypt.init_app(app)
     jwt.init_app(app)
+    socketio.init_app(app)
 
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(templates_bp, url_prefix="/templates")
@@ -40,4 +41,7 @@ def create_app():
 
 
     return app
-app = create_app()
+# app = create_app()
+if __name__ == "__main__":
+    app = create_app()
+    socketio.run(app, host="0.0.0.0", port=5000)

@@ -6,3 +6,4 @@ flask_migrate
 flask-bcrypt
 flask-jwt-extended
 gunicorn
+Flask-SocketIO

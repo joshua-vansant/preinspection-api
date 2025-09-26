@@ -3,7 +3,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from extensions import db
 from models.organization import Organization
 from models.user import User
-
+from sockets.org_events import notify_driver_joined
 import uuid
 
 organizations_bp = Blueprint("organizations", __name__)
@@ -101,6 +101,7 @@ def join_organization():
         return jsonify({"error": "Invite code not found"}), 404
 
     user.org_id = org.id
+    notify_driver_joined(user.org_id, driver_data)
     db.session.commit()
 
     return jsonify({
