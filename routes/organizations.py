@@ -43,6 +43,27 @@ def get_my_organization():
         "name": org.name
     }), 200
 
+
+@organizations_bp.get('/users')
+@jwt_required()
+def get_org_users():
+    user = User.query.get(get_jwt_identity())
+    if not user or user.role != "admin":
+        return jsonify({"error": "Only admins can view org users"}), 403
+
+    org = Organization.query.get(user.org_id)
+    if not org:
+        return jsonify({"error": "Organization not found"}), 404
+
+    users = User.query.filter_by(org_id=org.id).all()
+    users_data = [
+        {"id": u.id, "email": u.email, "role": u.role}
+        for u in users
+    ]
+
+    return jsonify({"organization": org.name, "users": users_data}), 200
+
+
 @organizations_bp.post('/code/regenerate')
 @jwt_required()
 def regenerate_org_code():
