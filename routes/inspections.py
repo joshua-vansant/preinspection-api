@@ -6,6 +6,7 @@ from models.vehicle import Vehicle
 from models.user import User
 from extensions import db
 from datetime import datetime, timezone
+from flask_socketio import emit
 
 inspections_bp = Blueprint("inspections", __name__)
 
@@ -61,6 +62,18 @@ def submit_inspection():
         notes=notes
     )
 
+        emit(
+        "inspection_created",
+        {
+            "id": new_inspection.id,
+            "driver_id": driver_id,
+            "template_id": template_id,
+            "created_at": new_inspection.created_at.isoformat(),
+        },
+        room=f"org_{org_id}",
+        namespace="/admin"
+    )
+
     db.session.add(inspection_record)
     db.session.commit()
 
@@ -89,6 +102,7 @@ def get_inspection_history():
         return jsonify({"error": "Unauthorized role"}), 403
 
     return jsonify([i.to_dict() for i in inspections]), 200
+
 
 @inspections_bp.get('/<int:inspection_id>')
 @jwt_required()
