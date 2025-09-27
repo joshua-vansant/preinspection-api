@@ -4,9 +4,9 @@ from models.inspection_results import InspectionResult
 from models.template import Template
 from models.vehicle import Vehicle
 from models.user import User
-from extensions import db
+from extensions import db, socketio
 from datetime import datetime, timezone
-from flask_socketio import emit
+# from flask_socketio import emit
 
 inspections_bp = Blueprint("inspections", __name__)
 
@@ -62,12 +62,17 @@ def submit_inspection():
         notes=notes
     )
 
+    print(f"[Inspections] About to commit inspection for vehicle {vehicle_id}")
+
     db.session.add(inspection_record)
     db.session.commit()
 
+    print(f"[Inspections] Inspection committed with id {inspection_record.id}")
+
+
     org_id = driver.org_id
 
-    emit(
+    socketio.emit(
         "inspection_created",
         {
             "id": inspection_record.id,
@@ -78,6 +83,8 @@ def submit_inspection():
         room=f"org_{org_id}",
         namespace="/admin"
     )
+    print(f"[SocketIO] Emitted inspection_created to room org_{org_id}")
+
 
     response = inspection_record.to_dict()
     if previous_data:
