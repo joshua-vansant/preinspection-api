@@ -1,7 +1,7 @@
 from flask_socketio import join_room, emit
 from extensions import socketio
 
-@socketio.on("join_org", namespace="/admin")
+@socketio.on("join_org")
 def handle_join_org(data):
     org_id = data.get("org_id")
     join_room(f"org_{org_id}")
