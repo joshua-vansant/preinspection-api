@@ -1,11 +1,11 @@
 from flask_socketio import join_room, emit
 from extensions import socketio
 
-@socketio.on("join_org")
+@socketio.on("join_org", namespace="/admin")
 def handle_join_org(data):
     org_id = data.get("org_id")
     join_room(f"org_{org_id}")
-    print(f"Client joined org {org_id}")
+    print(f"[SocketIO] Client joined org {org_id} on /admin")
 
 def notify_driver_joined(org_id, driver_data):
     driver_data = {
