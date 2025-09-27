@@ -81,7 +81,6 @@ def submit_inspection():
             "created_at": inspection_record.created_at.isoformat(),
         },
         room=f"org_{org_id}",
-        namespace="/admin"
     )
     print(f"[SocketIO] Emitted inspection_created to room org_{org_id}")
 

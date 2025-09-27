@@ -5,7 +5,7 @@ from extensions import socketio
 def handle_join_org(data):
     org_id = data.get("org_id")
     join_room(f"org_{org_id}")
-    print(f"[SocketIO] Client joined org {org_id} on /admin")
+    print(f"[SocketIO] Client joined org {org_id} on / namespace")
 
 def notify_driver_joined(org_id, driver_data):
     driver_data = {
