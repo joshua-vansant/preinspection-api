@@ -52,38 +52,38 @@ def submit_inspection():
                 "odometer": last_inspection.results.get("odometer")
             }
 
-inspection_record = InspectionResult(
-    driver_id=driver_id,
-    vehicle_id=vehicle_id,
-    template_id=template_id,
-    type=inspection_type,
-    results=results,
-    created_at=datetime.now(timezone.utc),
-    notes=notes
-)
+    inspection_record = InspectionResult(
+        driver_id=driver_id,
+        vehicle_id=vehicle_id,
+        template_id=template_id,
+        type=inspection_type,
+        results=results,
+        created_at=datetime.now(timezone.utc),
+        notes=notes
+    )
 
-db.session.add(inspection_record)
-db.session.commit()
+    db.session.add(inspection_record)
+    db.session.commit()
 
-org_id = driver.org_id
+    org_id = driver.org_id
 
-emit(
-    "inspection_created",
-    {
-        "id": inspection_record.id,
-        "driver_id": driver_id,
-        "template_id": template_id,
-        "created_at": inspection_record.created_at.isoformat(),
-    },
-    room=f"org_{org_id}",
-    namespace="/admin"
-)
+    emit(
+        "inspection_created",
+        {
+            "id": inspection_record.id,
+            "driver_id": driver_id,
+            "template_id": template_id,
+            "created_at": inspection_record.created_at.isoformat(),
+        },
+        room=f"org_{org_id}",
+        namespace="/admin"
+    )
 
-response = inspection_record.to_dict()
-if previous_data:
-    response["previous"] = previous_data
+    response = inspection_record.to_dict()
+    if previous_data:
+        response["previous"] = previous_data
 
-return jsonify(response), 201
+    return jsonify(response), 201
 
 
 @inspections_bp.get('/history')
