@@ -211,6 +211,12 @@ def update_inspection(inspection_id):
     claims = get_jwt()
     role = claims.get("role")
 
+    print(f"user_id: {user_id}, inspection.driver_id: {inspection.driver_id}, inspection.created_by_user_id: {inspection.created_by_user_id}")
+    print(f"user_id (type {type(user_id)}): {user_id}")
+    print(f"inspection.driver_id (type {type(inspection.driver_id)}): {inspection.driver_id}")
+    print(f"inspection.created_by_user_id (type {type(inspection.created_by_user_id)}): {inspection.created_by_user_id}")
+
+
     if role == "driver" and inspection.driver_id != user_id:
         return jsonify({"error": "Drivers can only edit their own inspections"}), 403
     if role == "driver" and (datetime.utcnow() - inspection.created_at).total_seconds() > 1800:
