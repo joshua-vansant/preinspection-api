@@ -47,9 +47,18 @@ def register():
     db.session.add(new_user)
     db.session.commit()
 
+    access_token = create_access_token(
+        identity=str(new_user.id),
+        additional_claims={"role": new_user.role}
+    )
+    refresh_token = create_refresh_token(identity=str(new_user.id))
+
     return jsonify({
         "message": "User registered successfully",
-        "user": new_user.to_dict(include_org_id=False)
+        "user": new_user.to_dict(include_org_id=False),
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "expires_in": 3600
     }), 201
 
 
