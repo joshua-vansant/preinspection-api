@@ -34,7 +34,7 @@ def add_vehicle():
     claims = get_jwt()
     user = User.query.get(user_id)
 
-    # number = data.get('number')
+    number = data.get('number')
     # if not number:
     #     return jsonify({"error": "Vehicle number is required"}), 400
 
