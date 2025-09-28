@@ -177,7 +177,7 @@ def get_vehicle_inspections(vehicle_id):
 def update_inspection(inspection_id):
     claims = get_jwt()
     role = claims.get("role")
-    user_id = get_jwt_identity()
+    user_id = int(get_jwt_identity())
     inspection = InspectionResult.query.get(inspection_id)
     if not inspection:
         return jsonify({"error": "Inspection not found"}), 404
