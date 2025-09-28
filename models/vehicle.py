@@ -1,4 +1,5 @@
 from extensions import db
+from datetime import datetime
 
 class Vehicle(db.Model):
     __tablename__ = 'vehicles'
@@ -14,6 +15,10 @@ class Vehicle(db.Model):
     license_plate = db.Column(db.String(10), nullable=False)
     mileage = db.Column(db.Integer, nullable=True)
     status = db.Column(db.String(20), nullable=False)
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey('inspection_app.user.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow)
+
 
     def to_dict(self):
         return {
@@ -26,6 +31,9 @@ class Vehicle(db.Model):
             "vin": self.vin,
             "license_plate": self.license_plate,
             "mileage": self.mileage,
-            "status": self.status
+            "status": self.status,
+            "created_by_user_id": self.created_by_user_id,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None
         }
 
