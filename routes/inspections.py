@@ -6,10 +6,18 @@ from models.vehicle import Vehicle
 from models.user import User
 from extensions import db, socketio
 from datetime import datetime, timezone
-# from flask_socketio import emit
 
 inspections_bp = Blueprint("inspections", __name__)
 
+# Helper: Check if driver has access to an inspection
+def driver_can_access(user, inspection):
+    if user.org_id:
+        return inspection.template.org_id == user.org_id
+    return inspection.driver_id == user.id
+
+# -----------------------------
+# Submit inspection
+# -----------------------------
 @inspections_bp.post('/submit')
 @jwt_required()
 def submit_inspection():
@@ -35,7 +43,8 @@ def submit_inspection():
         return jsonify({"error": "Template not found"}), 404
 
     driver = User.query.get(driver_id)
-    if driver.org_id != template.org_id:
+    # Safe org check
+    if template.org_id is not None and driver.org_id != template.org_id:
         return jsonify({"error": "Template does not belong to your organization"}), 403
 
     previous_data = {}
@@ -62,28 +71,21 @@ def submit_inspection():
         notes=notes
     )
 
-    print(f"[Inspections] About to commit inspection for vehicle {vehicle_id}")
-
     db.session.add(inspection_record)
     db.session.commit()
 
-    print(f"[Inspections] Inspection committed with id {inspection_record.id}")
-
-
-    org_id = driver.org_id
-
-    socketio.emit(
-        "inspection_created",
-        {
-            "id": inspection_record.id,
-            "driver_id": driver_id,
-            "template_id": template_id,
-            "created_at": inspection_record.created_at.isoformat(),
-        },
-        room=f"org_{org_id}",
-    )
-    print(f"[SocketIO] Emitted inspection_created to room org_{org_id}")
-
+    # Emit socket event to org room (skip if org_id is None)
+    if driver.org_id:
+        socketio.emit(
+            "inspection_created",
+            {
+                "id": inspection_record.id,
+                "driver_id": driver_id,
+                "template_id": template_id,
+                "created_at": inspection_record.created_at.isoformat(),
+            },
+            room=f"org_{driver.org_id}",
+        )
 
     response = inspection_record.to_dict()
     if previous_data:
@@ -92,19 +94,30 @@ def submit_inspection():
     return jsonify(response), 201
 
 
+# -----------------------------
+# Get inspection history
+# -----------------------------
 @inspections_bp.get('/history')
 @jwt_required()
 def get_inspection_history():
+    user_id = get_jwt_identity()
     claims = get_jwt()
     role = claims.get("role")
-    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
 
     if role == "driver":
-        inspections = InspectionResult.query.filter_by(driver_id=user_id).all()
+        if user.org_id:
+            inspections = (
+                db.session.query(InspectionResult)
+                .join(Template)
+                .filter(Template.org_id == user.org_id)
+                .all()
+            )
+        else:
+            inspections = InspectionResult.query.filter_by(driver_id=user.id).all()
     elif role == "admin":
-        user = User.query.get(user_id)
-        if not user:
-            return jsonify({"error": "Admin user not found"}), 404
+        if not user.org_id:
+            return jsonify({"error": "Admin has no org"}), 400
         org_driver_ids = db.session.query(User.id).filter_by(org_id=user.org_id)
         inspections = InspectionResult.query.filter(InspectionResult.driver_id.in_(org_driver_ids)).all()
     else:
@@ -113,6 +126,9 @@ def get_inspection_history():
     return jsonify([i.to_dict() for i in inspections]), 200
 
 
+# -----------------------------
+# Get single inspection
+# -----------------------------
 @inspections_bp.get('/<int:inspection_id>')
 @jwt_required()
 def get_inspection(inspection_id):
@@ -120,24 +136,25 @@ def get_inspection(inspection_id):
     if not inspection:
         return jsonify({"error": "Inspection not found"}), 404
 
-    template = Template.query.get(inspection.template_id)
-    if not template:
-        return jsonify({"error": "Template not found"}), 404
+    user = User.query.get(get_jwt_identity())
+    claims = get_jwt()
+    role = claims.get("role")
 
+    if role == "driver" and not driver_can_access(user, inspection):
+        return jsonify({"error": "Unauthorized"}), 403
+
+    template = Template.query.get(inspection.template_id)
     response = inspection.to_dict()
-    response["template"] = template.to_dict()
+    response["template"] = template.to_dict() if template else None
     return jsonify(response), 200
 
+
+# -----------------------------
+# Get last inspection for a vehicle
+# -----------------------------
 @inspections_bp.get('/last/<int:vehicle_id>')
 @jwt_required()
 def get_last_inspection(vehicle_id):
-    claims = get_jwt()
-    role = claims.get("role")
-    user_id = get_jwt_identity()
-    user = User.query.get(user_id)
-    if not user:
-        return jsonify({"error": "User not found"}), 404
-
     last_inspection = (
         InspectionResult.query
         .filter_by(vehicle_id=vehicle_id)
@@ -147,40 +164,52 @@ def get_last_inspection(vehicle_id):
     if not last_inspection:
         return jsonify({"message": "No inspections found for this vehicle"}), 200
 
-    if role == "driver":
-        template = Template.query.get(last_inspection.template_id)
-        if template.org_id != user.org_id:
-            return jsonify({"error": "Unauthorized"}), 403
+    user = User.query.get(get_jwt_identity())
+    claims = get_jwt()
+    role = claims.get("role")
+
+    if role == "driver" and not driver_can_access(user, last_inspection):
+        return jsonify({"error": "Unauthorized"}), 403
 
     return jsonify(last_inspection.to_dict()), 200
 
+
+# -----------------------------
+# Get inspections for a vehicle
+# -----------------------------
 @inspections_bp.get('/vehicle/<int:vehicle_id>')
 @jwt_required()
 def get_vehicle_inspections(vehicle_id):
+    user = User.query.get(get_jwt_identity())
     claims = get_jwt()
     role = claims.get("role")
-    user_id = get_jwt_identity()
-    user = User.query.get(user_id)
-    if not user:
-        return jsonify({"error": "User not found"}), 404
 
     query = InspectionResult.query.filter_by(vehicle_id=vehicle_id).order_by(InspectionResult.created_at.desc())
+
     if role == "driver":
-        template_ids = db.session.query(Template.id).filter_by(org_id=user.org_id)
-        query = query.filter(InspectionResult.template_id.in_(template_ids))
+        if user.org_id:
+            template_ids = db.session.query(Template.id).filter_by(org_id=user.org_id)
+            query = query.filter(InspectionResult.template_id.in_(template_ids))
+        else:
+            query = query.filter_by(driver_id=user.id)
 
     inspections = query.all()
     return jsonify([i.to_dict() for i in inspections]), 200
 
+
+# -----------------------------
+# Update inspection
+# -----------------------------
 @inspections_bp.put('/<int:inspection_id>')
 @jwt_required()
 def update_inspection(inspection_id):
-    claims = get_jwt()
-    role = claims.get("role")
-    user_id = int(get_jwt_identity())
     inspection = InspectionResult.query.get(inspection_id)
     if not inspection:
         return jsonify({"error": "Inspection not found"}), 404
+
+    user_id = get_jwt_identity()
+    claims = get_jwt()
+    role = claims.get("role")
 
     if role == "driver" and inspection.driver_id != user_id:
         return jsonify({"error": "Drivers can only edit their own inspections"}), 403
@@ -200,48 +229,3 @@ def update_inspection(inspection_id):
 
     db.session.commit()
     return jsonify(inspection.to_dict()), 200
-
-@inspections_bp.get('/vehicle/<int:vehicle_id>/status')
-@jwt_required()
-def get_vehicle_status(vehicle_id):
-    claims = get_jwt()
-    role = claims.get("role")
-    user_id = get_jwt_identity()
-    user = User.query.get(user_id)
-    if not user:
-        return jsonify({"error": "User not found"}), 404
-
-    vehicle = Vehicle.query.get(vehicle_id)
-    if not vehicle:
-        return jsonify({"error": "Vehicle not found"}), 404
-
-    last_inspection = (
-        InspectionResult.query
-        .filter_by(vehicle_id=vehicle_id)
-        .order_by(InspectionResult.created_at.desc())
-        .first()
-    )
-    if not last_inspection:
-        return jsonify({"vehicle_id": vehicle.id, "status": "No inspections yet"}), 200
-
-    if role == "driver":
-        template = Template.query.get(last_inspection.template_id)
-        if template.org_id != user.org_id:
-            return jsonify({"error": "Unauthorized"}), 403
-
-    response = {
-        "vehicle_id": vehicle.id,
-        "vehicle_name": getattr(vehicle, "name", None),
-        "last_inspection": last_inspection.to_dict()
-    }
-    return jsonify(response), 200
-
-@inspections_bp.get('/templates/available')
-@jwt_required()
-def get_available_templates():
-    user = User.query.get(get_jwt_identity())
-    if not user:
-        return jsonify({"error": "User not found"}), 404
-
-    templates = Template.query.filter_by(org_id=user.org_id).all()
-    return jsonify([t.to_dict() for t in templates]), 200

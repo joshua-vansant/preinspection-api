@@ -12,8 +12,18 @@ vehicles_bp = Blueprint("vehicles", __name__)
 def get_vehicles():
     user_id = get_jwt_identity()
     user = User.query.get(user_id)
-    vehicles = Vehicle.query.filter_by(org_id=user.org_id).all()
-    return jsonify([v.to_dict() for v in vehicles]), 200 
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    if user.org_id:
+        # User belongs to an org — return all vehicles for that org
+        vehicles = Vehicle.query.filter_by(org_id=user.org_id).all()
+    else:
+        # User does not belong to an org — return only vehicles they created
+        vehicles = Vehicle.query.filter_by(org_id=None, created_by_user_id=user_id).all()
+
+    return jsonify([v.to_dict() for v in vehicles]), 200
+
 
 # POST add a vehicle
 @vehicles_bp.post('/add')
@@ -34,7 +44,7 @@ def add_vehicle():
         if not org_id:
             return jsonify({"error": "Admin must provide org_id"}), 400
     else:
-        # driver cannot set org_id, use their own org
+        # driver cannot set org_id, use their own org (might be None)
         org_id = user.org_id
 
     new_vehicle = Vehicle(
@@ -46,7 +56,8 @@ def add_vehicle():
         vin=data.get("vin"),
         license_plate=data.get("license_plate"),
         mileage=data.get("mileage"),
-        status=data.get("status", "active")
+        status=data.get("status", "active"),
+        created_by_user_id=user_id,  # <-- Important!
     )
 
     db.session.add(new_vehicle)
@@ -56,6 +67,7 @@ def add_vehicle():
         "message": "Vehicle added successfully",
         "vehicle": new_vehicle.to_dict()
     }), 201
+
 
 # PUT/PATCH update a vehicle (admin-only)
 @vehicles_bp.put('/<int:vehicle_id>')

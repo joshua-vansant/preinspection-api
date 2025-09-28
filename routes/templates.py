@@ -4,10 +4,11 @@ from models.template import Template
 from models.template_item import TemplateItem
 from models.user import User
 from extensions import db
-from sqlalchemy import or_
+from sqlalchemy import or_, and_
 
 templates_bp = Blueprint("templates", __name__)
 
+# GET templates visible to the user
 @templates_bp.get('/')
 @jwt_required()
 def get_templates():
@@ -16,20 +17,21 @@ def get_templates():
     if not user:
         return jsonify({"error": "User not found"}), 404
 
-    templates = (
-        Template.query
-        .filter(
+    if user.org_id is None:
+        # Unaffiliated driver: only default templates
+        templates = Template.query.filter_by(is_default=True).all()
+    else:
+        # Drivers in an org: default + org templates
+        templates = Template.query.filter(
             or_(
                 Template.is_default == True,
                 Template.org_id == user.org_id
             )
-        )
-        .distinct()
-        .all()
-    )
+        ).all()
 
-    return jsonify([template.to_dict() for template in templates]), 200  # ✅ use to_dict()
+    return jsonify([t.to_dict() for t in templates]), 200
 
+# POST create a template (admin only)
 @templates_bp.post('/create')
 @jwt_required()
 def create_template():
@@ -46,6 +48,12 @@ def create_template():
 
     if not name:
         return jsonify({"error": "Name is required"}), 400
+
+    # Prevent multiple defaults per org
+    if is_default:
+        existing_default = Template.query.filter_by(org_id=user.org_id, is_default=True).first()
+        if existing_default:
+            return jsonify({"error": "A default template already exists for your org"}), 400
 
     for item in items_data:
         if not item.get("name") or not item.get("question"):
@@ -71,6 +79,7 @@ def create_template():
     db.session.commit()
     return jsonify({"message": "Template created successfully", "template": new_template.to_dict()}), 201
 
+# PUT edit a template (admin only)
 @templates_bp.put('/<int:template_id>/edit')
 @jwt_required()
 def edit_template(template_id):
@@ -87,10 +96,16 @@ def edit_template(template_id):
     data = request.get_json()
     name = data.get("name")
     items_data = data.get("items", [])
-    is_default = data.get("is_default", False)
+    is_default = data.get("is_default", template.is_default)
 
     if not name:
         return jsonify({"error": "Name is required"}), 400
+
+    # Prevent multiple defaults per org
+    if is_default and not template.is_default:
+        existing_default = Template.query.filter_by(org_id=user.org_id, is_default=True).first()
+        if existing_default:
+            return jsonify({"error": "A default template already exists for your org"}), 400
 
     template.name = name
     template.is_default = is_default
@@ -110,6 +125,7 @@ def edit_template(template_id):
     db.session.commit()
     return jsonify({"message": "Template updated successfully", "template": template.to_dict()}), 200
 
+# DELETE a template (admin only)
 @templates_bp.delete('/<int:template_id>/delete')
 @jwt_required()
 def delete_template(template_id):
