@@ -49,7 +49,7 @@ def register():
 
     return jsonify({
         "message": "User registered successfully",
-        "user": new_user.to_dict()
+        "user": new_user.to_dict(include_org_id=False)
     }), 201
 
 
