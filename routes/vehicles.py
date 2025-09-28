@@ -62,7 +62,7 @@ def add_vehicle():
         license_plate=data.get("license_plate"),
         mileage=data.get("mileage"),
         status=data.get("status", "active"),
-        created_by_user_id=user_id,  # <-- Important!
+        created_by_user_id=user_id,
     )
 
     db.session.add(new_vehicle)
