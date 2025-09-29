@@ -77,15 +77,19 @@ def submit_inspection():
     # Emit socket event to org room (skip if org_id is None)
     if driver.org_id:
         socketio.emit(
-            "inspection_created",
+        "inspection_created",
             {
-                "id": inspection_record.id,
-                "driver_id": driver_id,
-                "template_id": template_id,
-                "created_at": inspection_record.created_at.isoformat(),
+                **inspection_record.to_dict(),
+                "driver": {
+                    "id": driver.id,
+                    "first_name": driver.first_name,
+                    "last_name": driver.last_name,
+                    "full_name": f"{driver.first_name} {driver.last_name}"
+                }
             },
             room=f"org_{driver.org_id}",
         )
+
 
     response = inspection_record.to_dict()
     if previous_data:
