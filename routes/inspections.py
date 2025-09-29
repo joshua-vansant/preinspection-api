@@ -110,30 +110,27 @@ def get_inspection_history():
     user = User.query.get(user_id)
 
     if role == "driver":
-        if user.org_id:
-            inspections = (
-                db.session.query(InspectionResult)
-                .join(Template)
-                .filter(Template.org_id == user.org_id,
-                InspectionResult.driver_id == user.id)
-                .all()
-            )
-        else:
-            inspections = InspectionResult.query.filter_by(driver_id=user.id).all()
+        inspections = InspectionResult.query.filter_by(driver_id=user.id).all()
+
+
     elif role == "admin":
         if not user.org_id:
             return jsonify({"error": "Admin has no org"}), 400
-        org_driver_ids = db.session.query(User.id).filter_by(org_id=user.org_id)
+
+        # Get all drivers in this org
+        org_driver_ids = [id for (id,) in db.session.query(User.id).filter_by(org_id=user.org_id)]
         inspections = InspectionResult.query.filter(
             InspectionResult.driver_id.in_(org_driver_ids)
         ).all()
+
     else:
         return jsonify({"error": "Unauthorized role"}), 403
 
+    # Build response with driver info
     response = []
     for i in inspections:
         item = i.to_dict()
-        if i.driver:  # relationship works now
+        if i.driver:
             item["driver"] = {
                 "id": i.driver.id,
                 "first_name": i.driver.first_name,

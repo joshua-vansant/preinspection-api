@@ -11,6 +11,7 @@ class InspectionResult(db.Model):
     driver = db.relationship("User", backref="inspections", lazy="joined")
     vehicle_id = db.Column(db.Integer, db.ForeignKey('inspection_app.vehicles.id'), nullable=False)
     template_id = db.Column(db.Integer, db.ForeignKey('inspection_app.templates.id'), nullable=False)
+    template = db.relationship("Template", backref="inspection_results", lazy="joined")
     type = db.Column(db.String(50), nullable=False)  # "pre-trip", "post-trip"
     results = db.Column(db.JSON, nullable=False) 
     created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
