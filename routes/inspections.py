@@ -125,17 +125,21 @@ def get_inspection_history():
     else:
         return jsonify({"error": "Unauthorized role"}), 403
 
-    return jsonify([
-        {
-            **i.to_dict(),
-            "driver": {
+    response = []
+    for i in inspections:
+        item = i.to_dict()
+        if i.driver:  # relationship works now
+            item["driver"] = {
                 "id": i.driver.id,
-                "name": i.driver.name,
-                "email": i.driver.email,
-            } if i.driver else None
-        }
-        for i in inspections
-    ]), 200
+                "first_name": i.driver.first_name,
+                "last_name": i.driver.last_name,
+                "full_name": f"{i.driver.first_name} {i.driver.last_name}"
+            }
+        else:
+            item["driver"] = None
+        response.append(item)
+
+    return jsonify(response), 200
 
 
 # -----------------------------
