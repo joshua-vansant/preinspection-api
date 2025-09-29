@@ -187,23 +187,29 @@ def get_inspection(inspection_id):
 @inspections_bp.get('/last/<int:vehicle_id>')
 @jwt_required()
 def get_last_inspection(vehicle_id):
-    last_inspection = (
-        InspectionResult.query
-        .filter_by(vehicle_id=vehicle_id, type='post' if inspection_type == 'pre' else 'pre')
-        .order_by(InspectionResult.created_at.desc())
-        .first()
-    )
-    if not last_inspection:
-        return jsonify({"message": "No inspections found for this vehicle"}), 200
+    try:
+        last_inspection = (
+            InspectionResult.query
+            .filter_by(vehicle_id=vehicle_id)
+            .order_by(InspectionResult.created_at.desc())
+            .first()
+        )
+        if not last_inspection:
+            return jsonify({"message": "No inspections found for this vehicle"}), 200
 
-    user = User.query.get(get_jwt_identity())
-    claims = get_jwt()
-    role = claims.get("role")
+        user = User.query.get(get_jwt_identity())
+        claims = get_jwt()
+        role = claims.get("role")
 
-    if role == "driver" and not driver_can_access(user, last_inspection):
-        return jsonify({"error": "Unauthorized"}), 403
+        if role == "driver" and not driver_can_access(user, last_inspection):
+            return jsonify({"error": "Unauthorized"}), 403
 
-    return jsonify(last_inspection.to_dict()), 200
+        print(f"[DEBUG] Returning last inspection: id={last_inspection.id}, type={last_inspection.type}")
+
+        return jsonify(last_inspection.to_dict()), 200
+    except Exception as e:
+        print(f"[ERROR] get_last_inspection failed: {e}")
+        return jsonify({"error": "Internal server error"}), 500
 
 
 # -----------------------------
