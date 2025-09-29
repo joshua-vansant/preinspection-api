@@ -119,11 +119,23 @@ def get_inspection_history():
         if not user.org_id:
             return jsonify({"error": "Admin has no org"}), 400
         org_driver_ids = db.session.query(User.id).filter_by(org_id=user.org_id)
-        inspections = InspectionResult.query.filter(InspectionResult.driver_id.in_(org_driver_ids)).all()
+        inspections = InspectionResult.query.filter(
+            InspectionResult.driver_id.in_(org_driver_ids)
+        ).all()
     else:
         return jsonify({"error": "Unauthorized role"}), 403
 
-    return jsonify([i.to_dict() for i in inspections]), 200
+    return jsonify([
+        {
+            **i.to_dict(),
+            "driver": {
+                "id": i.driver.id,
+                "name": i.driver.name,
+                "email": i.driver.email,
+            } if i.driver else None
+        }
+        for i in inspections
+    ]), 200
 
 
 # -----------------------------
