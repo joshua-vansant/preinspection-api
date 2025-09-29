@@ -121,6 +121,31 @@ def create_organization():
         "organization": new_org.to_dict()  # ✅ use to_dict()
     }), 201
 
+@organizations_bp.put('/<int:org_id>')
+@jwt_required()
+def update_organization(org_id):
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    if not user or user.role != 'admin':
+        return jsonify({"error": "Unauthorized"}), 403
+
+    org = Organization.query.get(org_id)
+    if not org:
+        return jsonify({"error": "Organization not found"}), 404
+
+    if org.id != user.org_id:
+        return jsonify({"error": "Cannot edit this organization"}), 403
+
+    data = request.get_json()
+    name = data.get('name')
+    # add more fields here as needed
+
+    if name:
+        org.name = name
+
+    db.session.commit()
+    return jsonify(org.to_dict()), 200
+
 @organizations_bp.post("/remove_driver")
 @jwt_required()
 def remove_driver():
