@@ -34,7 +34,7 @@ def get_my_organization():
     if not org:
         return jsonify({"error": "Organization not found"}), 404
 
-    return jsonify(org.to_dict()), 200  # ✅ use to_dict()
+    return jsonify(org.to_dict()), 200
 
 @organizations_bp.get('/users')
 @jwt_required()
@@ -90,7 +90,7 @@ def join_organization():
 
     return jsonify({
         "message": f"Driver {user.id} successfully joined {org.name}",
-        "organization": org.to_dict()  # ✅ use to_dict()
+        "organization": org.to_dict()
     }), 200
 
 @organizations_bp.post("/create")
@@ -118,7 +118,7 @@ def create_organization():
 
     return jsonify({
         "message": "Organization created successfully",
-        "organization": new_org.to_dict()  # ✅ use to_dict()
+        "organization": new_org.to_dict()
     }), 201
 
 @organizations_bp.put('/<int:org_id>')
@@ -137,11 +137,15 @@ def update_organization(org_id):
         return jsonify({"error": "Cannot edit this organization"}), 403
 
     data = request.get_json()
-    name = data.get('name')
-    # add more fields here as needed
+    if 'name' in data and data['name']:
+        org.name = data['name'].strip()
+    if 'address' in data:
+        org.address = data['address'].strip() if data['address'] else None
+    if 'phone_number' in data:
+        org.phone_number = data['phone_number'].strip() if data['phone_number'] else None
+    if 'contact_name' in data:
+        org.contact_name = data['contact_name'].strip() if data['contact_name'] else None
 
-    if name:
-        org.name = name
 
     db.session.commit()
     return jsonify(org.to_dict()), 200

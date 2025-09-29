@@ -74,7 +74,6 @@ def submit_inspection():
     db.session.add(inspection_record)
     db.session.commit()
 
-    # Emit socket event to org room (skip if org_id is None)
     if driver.org_id:
         socketio.emit(
         "inspection_created",
