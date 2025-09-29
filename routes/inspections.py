@@ -9,12 +9,12 @@ from datetime import datetime, timezone
 
 inspections_bp = Blueprint("inspections", __name__)
 
-# Helper: Check if driver has access to an inspection
 def driver_can_access(user, inspection):
-    if user.org_id:
-        return inspection.template.org_id == user.org_id
-    return inspection.driver_id == user.id
-
+    if inspection.driver_id == user.id:
+        return True
+    if user.org_id and inspection.template and inspection.template.org_id == user.org_id:
+        return True
+    return False
 # -----------------------------
 # Submit inspection
 # -----------------------------
