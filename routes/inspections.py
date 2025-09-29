@@ -189,7 +189,7 @@ def get_inspection(inspection_id):
 def get_last_inspection(vehicle_id):
     last_inspection = (
         InspectionResult.query
-        .filter_by(vehicle_id=vehicle_id)
+        .filter_by(vehicle_id=vehicle_id, type='post' if inspection_type == 'pre' else 'pre')
         .order_by(InspectionResult.created_at.desc())
         .first()
     )
