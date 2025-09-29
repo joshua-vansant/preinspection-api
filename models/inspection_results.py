@@ -55,7 +55,10 @@ class InspectionResult(db.Model):
         )
         if not last_pre or not last_pre.start_mileage:
             return True  # No pre-trip to compare against
-
+        
+        if last_pre.start_mileage is None:
+            return True
+        
         # Allow a buffer of 1 mile
         return abs(self.end_mileage - last_pre.start_mileage) <= 1
 

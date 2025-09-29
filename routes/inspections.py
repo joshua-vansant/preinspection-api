@@ -76,11 +76,11 @@ def submit_inspection():
     )
 
     if inspection_record.type == "pre" and not inspection_record.start_mileage:
-        return {"error": "start_mileage is required for pre-trip"}, 400
+        return jsonify({"error": "start_mileage is required for pre-trip"}), 400
     if inspection_record.type == "post" and not inspection_record.end_mileage:
-        return {"error": "end_mileage is required for post-trip"}, 400
+        return jsonify({"error": "end_mileage is required for post-trip"}), 400
     if inspection_record.type == "post" and not inspection_record.is_mileage_continuous():
-        return {"error": "end_mileage must match last pre-trip start_mileage"}, 400
+        return jsonify({"error": "end_mileage must match last pre-trip start_mileage"}), 400
 
     db.session.add(inspection_record)
     db.session.commit()
