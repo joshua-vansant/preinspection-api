@@ -43,7 +43,6 @@ def submit_inspection():
         return jsonify({"error": "Template not found"}), 404
 
     driver = User.query.get(driver_id)
-    # Safe org check
     if template.org_id is not None and driver.org_id != template.org_id:
         return jsonify({"error": "Template does not belong to your organization"}), 403
 
@@ -76,12 +75,19 @@ def submit_inspection():
         odometer_verified=data.get("odometer_verified", False),
     )
 
+    if inspection_record.type == "pre" and not inspection_record.start_mileage:
+        return {"error": "start_mileage is required for pre-trip"}, 400
+    if inspection_record.type == "post" and not inspection_record.end_mileage:
+        return {"error": "end_mileage is required for post-trip"}, 400
+    if inspection_record.type == "post" and not inspection_record.is_mileage_continuous():
+        return {"error": "end_mileage must match last pre-trip start_mileage"}, 400
+
     db.session.add(inspection_record)
     db.session.commit()
 
     if driver.org_id:
         socketio.emit(
-        "inspection_created",
+            "inspection_created",
             {
                 **inspection_record.to_dict(),
                 "driver": {
@@ -93,7 +99,6 @@ def submit_inspection():
             },
             room=f"org_{driver.org_id}",
         )
-
 
     response = inspection_record.to_dict()
     if previous_data:
