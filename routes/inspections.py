@@ -114,7 +114,8 @@ def get_inspection_history():
             inspections = (
                 db.session.query(InspectionResult)
                 .join(Template)
-                .filter(Template.org_id == user.org_id)
+                .filter(Template.org_id == user.org_id,
+                InspectionResult.driver_id == user.id)
                 .all()
             )
         else:
