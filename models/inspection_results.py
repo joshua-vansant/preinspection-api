@@ -8,6 +8,7 @@ class InspectionResult(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     driver_id = db.Column(db.Integer, db.ForeignKey('inspection_app.user.id'), nullable=False)
+    driver = db.relationship("User", backref="inspections", lazy="joined")
     vehicle_id = db.Column(db.Integer, db.ForeignKey('inspection_app.vehicles.id'), nullable=False)
     template_id = db.Column(db.Integer, db.ForeignKey('inspection_app.templates.id'), nullable=False)
     type = db.Column(db.String(50), nullable=False)  # "pre-trip", "post-trip"
