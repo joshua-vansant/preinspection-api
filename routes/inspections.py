@@ -82,6 +82,11 @@ def submit_inspection():
     if inspection_record.type == "post" and not inspection_record.is_mileage_continuous():
         return jsonify({"error": "end_mileage must match last pre-trip start_mileage"}), 400
 
+
+    print(f"[DEBUG] Submitting inspection: id=None yet, type={inspection_type}, "
+      f"start_mileage={inspection_record.start_mileage}, "
+      f"end_mileage={inspection_record.end_mileage}")
+
     db.session.add(inspection_record)
     db.session.commit()
 
