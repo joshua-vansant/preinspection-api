@@ -238,7 +238,6 @@ def update_inspection(inspection_id):
     claims = get_jwt()
     role = claims.get("role")
 
-
     if role == "driver" and inspection.driver_id != user_id:
         return jsonify({"error": "Drivers can only edit their own inspections"}), 403
     if role == "driver" and (datetime.utcnow() - inspection.created_at).total_seconds() > 1800:
@@ -247,13 +246,27 @@ def update_inspection(inspection_id):
     data = request.get_json()
     results = data.get("results")
     notes = data.get("notes")
-    inspection.start_mileage = data.get("start_mileage")
-    inspection.end_mileage = data.get("end_mileage")
+    start_mileage = data.get("start_mileage")
+    end_mileage = data.get("end_mileage")
     inspection.fuel_level = data.get("fuel_level")
     inspection.fuel_notes = data.get("fuel_notes")
     inspection.odometer_verified = data.get("odometer_verified", inspection.odometer_verified)
 
+    # -----------------------------
+    # REQUIRED MILEAGE VALIDATION
+    # -----------------------------
+    if inspection.type == "pre" and (start_mileage is None):
+        return jsonify({"error": "start_mileage is required for pre-trip"}), 400
+    if inspection.type == "post" and (end_mileage is None):
+        return jsonify({"error": "end_mileage is required for post-trip"}), 400
 
+    # Optional: enforce continuous mileage if needed
+    if inspection.type == "post" and not inspection.is_mileage_continuous():
+        return jsonify({"error": "end_mileage must match last pre-trip start_mileage"}), 400
+
+    # Assign validated fields
+    inspection.start_mileage = start_mileage
+    inspection.end_mileage = end_mileage
     if results and not isinstance(results, dict):
         return jsonify({"error": "results must be a JSON object"}), 400
     if results:
