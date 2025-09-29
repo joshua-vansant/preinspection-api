@@ -68,7 +68,12 @@ def submit_inspection():
         type=inspection_type,
         results=results,
         created_at=datetime.now(timezone.utc),
-        notes=notes
+        notes=notes,
+        start_mileage=data.get("start_mileage"),
+        end_mileage=data.get("end_mileage"),
+        fuel_level=data.get("fuel_level"),
+        fuel_notes=data.get("fuel_notes"),
+        odometer_verified=data.get("odometer_verified", False),
     )
 
     db.session.add(inspection_record)
@@ -237,6 +242,12 @@ def update_inspection(inspection_id):
     data = request.get_json()
     results = data.get("results")
     notes = data.get("notes")
+    inspection.start_mileage = data.get("start_mileage")
+    inspection.end_mileage = data.get("end_mileage")
+    inspection.fuel_level = data.get("fuel_level")
+    inspection.fuel_notes = data.get("fuel_notes")
+    inspection.odometer_verified = data.get("odometer_verified", inspection.odometer_verified)
+
 
     if results and not isinstance(results, dict):
         return jsonify({"error": "results must be a JSON object"}), 400
