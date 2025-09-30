@@ -30,7 +30,6 @@ def submit_inspection():
     notes = data.get('notes')
     start_mileage = data.get("start_mileage")
 
-    print(f"[DEBUG] Incoming inspection submit: driver_id={driver_id}, vehicle_id={vehicle_id}, start_mileage={start_mileage}")
 
     if not template_id or not results or not vehicle_id or not inspection_type:
         return jsonify({"error": "template_id, vehicle_id, type, and results are required"}), 400
@@ -38,6 +37,9 @@ def submit_inspection():
         return jsonify({"error": "results must be a JSON object"}), 400
     if start_mileage is None:
         return jsonify({"error": "start_mileage is required for all inspections"}), 400
+    if start_mileage > 1000000:
+        return jsonify({"error": "start_mileage seems too high"}), 400
+
 
     claims = get_jwt()
     if claims.get("role") != "driver":
@@ -54,11 +56,8 @@ def submit_inspection():
     # --- Mileage validation ---
     vehicle = Vehicle.query.get(vehicle_id)
     if vehicle:
-        print(f"[DEBUG] Fetched vehicle: id={vehicle.id}, org_id={vehicle.org_id}, mileage={vehicle.mileage}")
         if vehicle.mileage is not None:
             if start_mileage < vehicle.mileage:
-                print(f"Start Mileage: {start_mileage}. Vehicle Mileage: {vehicle.mileage}")
-                print(f"Vehicle {vehicle.id} is being returned at line 58 in inspections.py")
                 return jsonify({"error": "start_mileage cannot be less than vehicle's current mileage"}), 400
         else:
             print(f"[DEBUG] Vehicle {vehicle.id} has no mileage set, accepting {start_mileage} as first value.")
@@ -197,11 +196,8 @@ def get_last_inspection(vehicle_id):
         if role == "driver" and not driver_can_access(user, last_inspection):
             return jsonify({"error": "Unauthorized"}), 403
 
-        print(f"[DEBUG] Returning last inspection: id={last_inspection.id}, type={last_inspection.type}")
-
         return jsonify(last_inspection.to_dict()), 200
     except Exception as e:
-        print(f"[ERROR] get_last_inspection failed: {e}")
         return jsonify({"error": "Internal server error"}), 500
 
 
