@@ -28,11 +28,16 @@ def submit_inspection():
     inspection_type = data.get('type')
     results = data.get('results')
     notes = data.get('notes')
+    start_mileage = data.get("start_mileage")
+
+    print(f"[DEBUG] Incoming inspection submit: driver_id={driver_id}, vehicle_id={vehicle_id}, start_mileage={start_mileage}")
 
     if not template_id or not results or not vehicle_id or not inspection_type:
         return jsonify({"error": "template_id, vehicle_id, type, and results are required"}), 400
     if not isinstance(results, dict):
         return jsonify({"error": "results must be a JSON object"}), 400
+    if start_mileage is None:
+        return jsonify({"error": "start_mileage is required for all inspections"}), 400
 
     claims = get_jwt()
     if claims.get("role") != "driver":
@@ -46,19 +51,17 @@ def submit_inspection():
     if template.org_id is not None and driver.org_id != template.org_id:
         return jsonify({"error": "Template does not belong to your organization"}), 403
 
-    previous_data = {}
-    if inspection_type == 'post':
-        last_inspection = (
-            InspectionResult.query
-            .filter_by(vehicle_id=vehicle_id)
-            .order_by(InspectionResult.created_at.desc())
-            .first()
-        )
-        if last_inspection:
-            previous_data = {
-                "gas_level": last_inspection.results.get("gas_level"),
-                "odometer": last_inspection.results.get("odometer")
-            }
+    # --- Mileage validation ---
+    vehicle = Vehicle.query.get(vehicle_id)
+    if vehicle:
+        print(f"[DEBUG] Fetched vehicle: id={vehicle.id}, org_id={vehicle.org_id}, mileage={vehicle.mileage}")
+        if vehicle.mileage is not None:
+            if start_mileage < vehicle.mileage:
+                print(f"Start Mileage: {start_mileage}. Vehicle Mileage: {vehicle.mileage}")
+                print(f"Vehicle {vehicle.id} is being returned at line 58 in inspections.py")
+                return jsonify({"error": "start_mileage cannot be less than vehicle's current mileage"}), 400
+        else:
+            print(f"[DEBUG] Vehicle {vehicle.id} has no mileage set, accepting {start_mileage} as first value.")
 
     inspection_record = InspectionResult(
         driver_id=driver_id,
@@ -68,28 +71,21 @@ def submit_inspection():
         results=results,
         created_at=datetime.now(timezone.utc),
         notes=notes,
-        start_mileage=data.get("start_mileage"),
-        end_mileage=data.get("end_mileage"),
+        start_mileage=start_mileage,
         fuel_level=data.get("fuel_level"),
         fuel_notes=data.get("fuel_notes"),
         odometer_verified=data.get("odometer_verified", False),
     )
 
-    if inspection_record.type == "pre" and not inspection_record.start_mileage:
-        return jsonify({"error": "start_mileage is required for pre-trip"}), 400
-    if inspection_record.type == "post" and not inspection_record.end_mileage:
-        return jsonify({"error": "end_mileage is required for post-trip"}), 400
-    if inspection_record.type == "post" and not inspection_record.is_mileage_continuous():
-        return jsonify({"error": "end_mileage must match last pre-trip start_mileage"}), 400
-
-
-    print(f"[DEBUG] Submitting inspection: id=None yet, type={inspection_type}, "
-      f"start_mileage={inspection_record.start_mileage}, "
-      f"end_mileage={inspection_record.end_mileage}")
-
     db.session.add(inspection_record)
+
+    # --- Update vehicle current mileage ---
+    if vehicle:
+        vehicle.mileage = start_mileage
+
     db.session.commit()
 
+    # Socket emit
     if driver.org_id:
         socketio.emit(
             "inspection_created",
@@ -105,11 +101,8 @@ def submit_inspection():
             room=f"org_{driver.org_id}",
         )
 
-    response = inspection_record.to_dict()
-    if previous_data:
-        response["previous"] = previous_data
+    return jsonify(inspection_record.to_dict()), 201
 
-    return jsonify(response), 201
 
 
 # -----------------------------
@@ -258,32 +251,31 @@ def update_inspection(inspection_id):
     results = data.get("results")
     notes = data.get("notes")
     start_mileage = data.get("start_mileage")
-    end_mileage = data.get("end_mileage")
+
+    if start_mileage is None:
+        return jsonify({"error": "start_mileage is required"}), 400
+
+    # --- Mileage validation ---
+    vehicle = Vehicle.query.get(inspection.vehicle_id)
+    if vehicle and vehicle.mileage is not None:
+        if start_mileage < vehicle.mileage:
+            return jsonify({"error": "start_mileage cannot be less than vehicle's current mileage"}), 400
+
+    inspection.start_mileage = start_mileage
     inspection.fuel_level = data.get("fuel_level")
     inspection.fuel_notes = data.get("fuel_notes")
     inspection.odometer_verified = data.get("odometer_verified", inspection.odometer_verified)
 
-    # -----------------------------
-    # REQUIRED MILEAGE VALIDATION
-    # -----------------------------
-    if inspection.type == "pre" and (start_mileage is None):
-        return jsonify({"error": "start_mileage is required for pre-trip"}), 400
-    if inspection.type == "post" and (end_mileage is None):
-        return jsonify({"error": "end_mileage is required for post-trip"}), 400
-
-    # Optional: enforce continuous mileage if needed
-    if inspection.type == "post" and not inspection.is_mileage_continuous():
-        return jsonify({"error": "end_mileage must match last pre-trip start_mileage"}), 400
-
-    # Assign validated fields
-    inspection.start_mileage = start_mileage
-    inspection.end_mileage = end_mileage
     if results and not isinstance(results, dict):
         return jsonify({"error": "results must be a JSON object"}), 400
     if results:
         inspection.results = results
     if notes is not None:
         inspection.notes = notes
+
+    # Update vehicle mileage
+    if vehicle:
+        vehicle.mileage = start_mileage
 
     db.session.commit()
     return jsonify(inspection.to_dict()), 200
