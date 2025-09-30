@@ -3,6 +3,8 @@ from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from extensions import db, bcrypt
 from models.user import User
 import re
+from models.organization import Organization
+import secrets
 
 admins_bp = Blueprint("admins", __name__)
 
@@ -42,6 +44,54 @@ def create_admin():
         "message": "Admin user created successfully",
         "user": new_admin.to_dict()
     }), 201
+
+
+@admins_bp.post('/invite')
+@jwt_required()
+def generate_admin_invite():
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    claims = get_jwt()
+
+    if claims.get("role") != "admin":
+        return jsonify({"error": "Only admins can generate admin invites"}), 403
+
+    # Generate a unique, random code
+    code = secrets.token_urlsafe(8)
+
+    org = Organization.query.get(user.org_id)
+    if not org:
+        return jsonify({"error": "Organization not found"}), 404
+    org.admin_invite_code = db.session.add(new_invite)
+    
+    db.session.commit()
+
+    return jsonify({"code": code}), 201
+
+
+@admins_bp.post('/redeem')
+@jwt_required()
+def redeem_admin_invite():
+    user = User.query.get(get_jwt_identity())
+    data = request.get_json()
+    code = data.get("code", "").strip()
+
+    if not code:
+        return jsonify({"error": "Code is required"}), 400
+
+    org = Organization.query.filter_by(admin_invite_code=code).first()
+    if not org:
+        return jsonify({"error": "Invalid code"}), 400
+
+    # Update role
+    user.role = "admin"
+    user.org_id = org.id
+
+    # Optional: invalidate the code
+    org.admin_invite_code = None
+    db.session.commit()
+
+    return jsonify({"message": "You are now an admin", "org_id": org.id}), 200
 
 
 def is_valid_email(email: str) -> bool:

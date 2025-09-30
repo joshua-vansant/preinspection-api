@@ -11,6 +11,7 @@ class Organization(db.Model):
     admin_id = db.Column(db.Integer, db.ForeignKey('inspection_app.user.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     invite_code = db.Column(db.String(50), unique=True, nullable=False, default=lambda: str(uuid.uuid4())[:8])
+    admin_invite_code = db.Column(db.String(32), nullable=True)
     address = db.Column(db.String(255), nullable=True)
     phone_number = db.Column(db.String(20), nullable=True)
     contact_name = db.Column(db.String(100), nullable=True)
@@ -25,6 +26,7 @@ class Organization(db.Model):
             "phone_number": self.phone_number,
             "contact_name": self.contact_name,
             "invite_code": self.invite_code,
+            "admin_invite_code": self.admin_invite_code,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None
         }

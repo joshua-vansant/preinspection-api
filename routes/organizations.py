@@ -4,7 +4,7 @@ from extensions import db
 from models.organization import Organization
 from models.user import User
 from sockets.org_events import notify_driver_joined, notify_driver_left
-import uuid
+from uuid import uuid4
 
 organizations_bp = Blueprint("organizations", __name__)
 
@@ -97,24 +97,29 @@ def join_organization():
 @jwt_required()
 def create_organization():
     user = User.query.get(get_jwt_identity())
-    if not user or user.role != "admin":
-        return jsonify({"error": "Only admins can create organizations"}), 403
+
+    # Ensure user is not already in an org
     if user.org_id:
         return jsonify({"error": "User already belongs to an organization"}), 400
 
-    data = request.get_json()
-    name = data.get("name")
-    if not name or not isinstance(name, str) or len(name.strip()) < 3:
-        return jsonify({"error": "Organization name must be at least 3 characters"}), 400
-    if Organization.query.filter_by(name=name).first():
-        return jsonify({"error": "Organization with this name already exists"}), 400
 
+    data = request.get_json()
+    name = data.get("name").strip()
+
+    # Validation for org name...
+    if Organization.query.filter_by(name=name).first():
+        return jsonify({"error": "Organization already exists"}), 400
+
+    # Create new org
     new_org = Organization(name=name, admin_id=user.id)
     db.session.add(new_org)
     db.session.commit()
 
     user.org_id = new_org.id
+    if user.role == "driver":
+        user.role = "admin"
     db.session.commit()
+
 
     return jsonify({
         "message": "Organization created successfully",
@@ -195,3 +200,38 @@ def leave_organization():
     notify_driver_left(org_id, user)
 
     return jsonify({"message": "Successfully left the organization"}), 200
+
+
+@organizations_bp.get("/admin_code")
+@jwt_required()
+def get_admin_invite_code():
+    user = User.query.get(get_jwt_identity())
+    if not user or user.role != "admin":
+        return jsonify({"error": "Only admins can generate admin codes"}), 403
+
+    org = Organization.query.get(user.org_id)
+    if not org:
+        return jsonify({"error": "Organization not found"}), 404
+
+    # Generate if missing
+    if not org.admin_invite_code:
+        org.admin_invite_code = str(uuid4()).split("-")[0].upper()
+        db.session.commit()
+
+    return jsonify({"admin_invite_code": org.admin_invite_code})
+
+
+@organizations_bp.post("/admin_code/regenerate")
+@jwt_required()
+def regenerate_admin_code():
+    user = User.query.get(get_jwt_identity())
+    if not user or user.role != "admin":
+        return jsonify({"error": "Only admins can regenerate admin codes"}), 403
+
+    org = Organization.query.get(user.org_id)
+    if not org:
+        return jsonify({"error": "Organization not found"}), 404
+
+    org.admin_invite_code = str(uuid4()).split("-")[0].upper()
+    db.session.commit()
+    return jsonify({"admin_invite_code": org.admin_invite_code})
