@@ -75,11 +75,14 @@ def redeem_admin_invite():
     user = User.query.get(get_jwt_identity())
     data = request.get_json()
     code = data.get("code", "").strip()
+    print(f"Received code from client: '{code}'")
 
     if not code:
         return jsonify({"error": "Code is required"}), 400
 
     org = Organization.query.filter_by(admin_invite_code=code).first()
+    print(f"Looking for org with admin_invite_code='{code}', found: {org}")  # DEBUG
+
     if not org:
         return jsonify({"error": "Invalid code"}), 400
 
