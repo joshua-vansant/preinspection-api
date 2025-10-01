@@ -150,12 +150,12 @@ def delete_organization():
     # Remove templates but keep inspections
     for template in org.templates:
         # Detach inspections from template
-        for inspection in template.inspections:
+        for inspection in template.inspection_results:
             inspection.template_id = None
         db.session.delete(template)
 
     # remove invite codes
-    org.invite_code = None
+    org.invite_code = str(uuid4())[:8] 
     org.admin_invite_code = None
 
     # Remove org reference from users
