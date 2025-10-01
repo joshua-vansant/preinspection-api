@@ -3,6 +3,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from extensions import db
 from models.organization import Organization
 from models.user import User
+from models.vehicle import Vehicle
 from sockets.org_events import notify_driver_joined, notify_driver_left
 from uuid import uuid4
 
