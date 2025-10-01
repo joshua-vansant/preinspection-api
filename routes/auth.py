@@ -75,10 +75,13 @@ def login():
     if not user or not bcrypt.check_password_hash(user.password_hash, password):
         return jsonify({"error": "Invalid credentials"}), 401
 
+    # Dynamic role: driver if not in org
+    role = 'driver' if not user.org_id else user.role
+
     access_token = create_access_token(
         identity=str(user.id),
-        additional_claims={"role": user.role},
-        expires_delta=False  # let config handle expiry
+        additional_claims={"role": role},
+        expires_delta=False
     )
     refresh_token = create_refresh_token(identity=str(user.id))
 
@@ -88,6 +91,7 @@ def login():
         "expires_in": 3600,
         "user": user.to_dict()
     }), 200
+
 
 
 @auth_bp.post('/refresh')
