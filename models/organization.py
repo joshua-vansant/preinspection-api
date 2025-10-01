@@ -16,6 +16,9 @@ class Organization(db.Model):
     phone_number = db.Column(db.String(20), nullable=True)
     contact_name = db.Column(db.String(100), nullable=True)
     updated_at = db.Column(db.DateTime, onupdate=datetime.utcnow)
+    vehicles = db.relationship("Vehicle", backref="organization", lazy="dynamic")
+    templates = db.relationship("Template", backref="organization", lazy="dynamic")
+
 
     def to_dict(self):
         return {

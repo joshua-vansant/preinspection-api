@@ -12,7 +12,7 @@ class InspectionResult(db.Model):
     driver_id = db.Column(db.Integer, db.ForeignKey('inspection_app.user.id'), nullable=False)
     driver = db.relationship("User", backref="inspections", lazy="joined")
     vehicle_id = db.Column(db.Integer, db.ForeignKey('inspection_app.vehicles.id'), nullable=False)
-    template_id = db.Column(db.Integer, db.ForeignKey('inspection_app.templates.id'), nullable=False)
+    template_id = db.Column(db.Integer, db.ForeignKey('inspection_app.templates.id'), nullable=True)
     template = db.relationship("Template", backref="inspection_results", lazy="joined")
 
     type = db.Column(db.String(50), nullable=False)  # "pre-trip", "post-trip"
@@ -21,7 +21,6 @@ class InspectionResult(db.Model):
     notes = db.Column(db.Text, nullable=True)
     status = db.Column(db.String(20), nullable=True)  # pass, fail, needs_repair
 
-    # 🚗 keep only start_mileage
     start_mileage = db.Column(db.Integer, nullable=False)
 
     odometer_verified = db.Column(db.Boolean, default=False)

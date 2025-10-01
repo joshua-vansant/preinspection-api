@@ -126,6 +126,50 @@ def create_organization():
         "organization": new_org.to_dict()
     }), 201
 
+
+@organizations_bp.delete("/delete")
+@jwt_required()
+def delete_organization():
+    user = User.query.get(get_jwt_identity())
+    if not user or user.role != "admin":
+        return jsonify({"error": "Only admins can delete organizations"}), 403
+
+    org = Organization.query.get(user.org_id)
+    if not org:
+        return jsonify({"error": "Organization not found"}), 404
+
+    # Remove vehicles
+    for vehicle in Vehicle.query.filter_by(org_id=org.id).all():
+        if vehicle.created_by_user_id is None:
+            db.session.delete(vehicle)
+        else:
+            vehicle.org_id = None
+
+
+    # Remove templates but keep inspections
+    for template in org.templates:
+        # Detach inspections from template
+        for inspection in template.inspections:
+            inspection.template_id = None
+        db.session.delete(template)
+
+    # remove invite codes
+    org.invite_code = None
+    org.admin_invite_code = None
+
+    # Remove org reference from users
+    users = User.query.filter_by(org_id=org.id).all()
+    for u in users:
+        u.org_id = None
+        if u.role == "admin":
+            u.role = "driver"
+
+    db.session.delete(org)
+    db.session.commit()
+
+    return jsonify({"message": "Organization deleted, inspections retained"}), 200
+
+
 @organizations_bp.put('/<int:org_id>')
 @jwt_required()
 def update_organization(org_id):
