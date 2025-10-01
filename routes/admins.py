@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from extensions import db, bcrypt
 from models.user import User
@@ -72,6 +72,9 @@ def generate_admin_invite():
 @admins_bp.post('/redeem')
 @jwt_required()
 def redeem_admin_invite():
+    current_app.logger.debug("redeem_admin_invite() called")
+    current_app.logger.debug(f"JWT identity: {get_jwt_identity()}")
+    current_app.logger.debug(f"Request JSON: {request.get_json()}")
     user = User.query.get(get_jwt_identity())
     data = request.get_json()
     code = data.get("code", "").strip()
