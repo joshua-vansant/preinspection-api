@@ -51,6 +51,14 @@ def add_vehicle():
     else:
         # driver cannot set org_id, use their own org (might be None)
         org_id = user.org_id
+    
+    # Optional: validate admin-provided org_id
+    if org_id:
+        from models import Organization
+        org = Organization.query.get(org_id)
+        if not org:
+            return jsonify({"error": "Invalid org_id"}), 400
+
 
     new_vehicle = Vehicle(
         org_id=org_id,

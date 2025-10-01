@@ -9,20 +9,18 @@ class InspectionResult(db.Model):
     __table_args__ = {"schema": "inspection_app"}
 
     id = db.Column(db.Integer, primary_key=True)
-    driver_id = db.Column(db.Integer, db.ForeignKey('inspection_app.user.id'), nullable=False)
+    driver_id = db.Column(db.Integer, db.ForeignKey('inspection_app.user.id'), nullable=True)
     driver = db.relationship("User", backref="inspections", lazy="joined")
     vehicle_id = db.Column(db.Integer, db.ForeignKey('inspection_app.vehicles.id'), nullable=False)
     template_id = db.Column(db.Integer, db.ForeignKey('inspection_app.templates.id'), nullable=True)
     template = db.relationship("Template", backref="inspection_results", lazy="joined")
-
+    org_id = db.Column(db.Integer, db.ForeignKey('inspection_app.organizations.id'), nullable=True)
     type = db.Column(db.String(50), nullable=False)  # "pre-trip", "post-trip"
     results = db.Column(db.JSON, nullable=False)
     created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
     notes = db.Column(db.Text, nullable=True)
     status = db.Column(db.String(20), nullable=True)  # pass, fail, needs_repair
-
     start_mileage = db.Column(db.Integer, nullable=False)
-
     odometer_verified = db.Column(db.Boolean, default=False)
     fuel_level = db.Column(db.Float, nullable=True)  # store as percentage 0-100
     fuel_notes = db.Column(db.Text, nullable=True)
@@ -59,6 +57,7 @@ class InspectionResult(db.Model):
             "driver_id": self.driver_id,
             "vehicle_id": self.vehicle_id,
             "template_id": self.template_id,
+            "org_id": self.org_id,
             "type": self.type,
             "results": self.results,
             "status": self.status,

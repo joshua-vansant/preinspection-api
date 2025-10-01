@@ -10,11 +10,25 @@ from datetime import datetime, timezone
 inspections_bp = Blueprint("inspections", __name__)
 
 def driver_can_access(user, inspection):
+#    - Driver can always access their own inspections.
+#    - Driver can access inspections with driver_id=None but org_id matching their org.
     if inspection.driver_id == user.id:
         return True
-    if user.org_id and inspection.template and inspection.template.org_id == user.org_id:
+    if user.org_id and inspection.driver_id is None and inspection.org_id == user.org_id:
         return True
     return False
+
+
+# Helper to filter queries by driver/org access
+def filter_by_driver_access(query, user):
+    if user.org_id:
+        return query.filter(
+            (InspectionResult.driver_id == user.id) |
+            ((InspectionResult.driver_id == None) & (InspectionResult.org_id == user.org_id))
+        )
+    else:
+        return query.filter_by(driver_id=user.id)
+
 # -----------------------------
 # Submit inspection
 # -----------------------------
@@ -116,35 +130,29 @@ def get_inspection_history():
     user = User.query.get(user_id)
 
     if role == "driver":
-        inspections = InspectionResult.query.filter_by(driver_id=user.id).all()
-
-
+        inspections_query = InspectionResult.query
+        inspections_query = filter_by_driver_access(inspections_query, user)
+        inspections = inspections_query.all()
     elif role == "admin":
         if not user.org_id:
             return jsonify({"error": "Admin has no org"}), 400
-
-        # Get all drivers in this org
         org_driver_ids = [id for (id,) in db.session.query(User.id).filter_by(org_id=user.org_id)]
         inspections = InspectionResult.query.filter(
-            InspectionResult.driver_id.in_(org_driver_ids)
+            (InspectionResult.driver_id.in_(org_driver_ids)) |
+            (InspectionResult.org_id == user.org_id)
         ).all()
-
     else:
         return jsonify({"error": "Unauthorized role"}), 403
 
-    # Build response with driver info
     response = []
-    for i in inspections:
-        item = i.to_dict()
-        if i.driver:
-            item["driver"] = {
-                "id": i.driver.id,
-                "first_name": i.driver.first_name,
-                "last_name": i.driver.last_name,
-                "full_name": f"{i.driver.first_name} {i.driver.last_name}"
-            }
-        else:
-            item["driver"] = None
+    for insp in inspections:
+        item = insp.to_dict()
+        item["driver"] = {
+            "id": insp.driver.id,
+            "first_name": insp.driver.first_name,
+            "last_name": insp.driver.last_name,
+            "full_name": f"{insp.driver.first_name} {insp.driver.last_name}"
+        } if insp.driver else None
         response.append(item)
 
     return jsonify(response), 200
@@ -170,6 +178,13 @@ def get_inspection(inspection_id):
     template = Template.query.get(inspection.template_id)
     response = inspection.to_dict()
     response["template"] = template.to_dict() if template else None
+    response["driver"] = {
+        "id": inspection.driver.id,
+        "first_name": inspection.driver.first_name,
+        "last_name": inspection.driver.last_name,
+        "full_name": f"{inspection.driver.first_name} {inspection.driver.last_name}"
+    } if inspection.driver else None
+
     return jsonify(response), 200
 
 
@@ -179,26 +194,27 @@ def get_inspection(inspection_id):
 @inspections_bp.get('/last/<int:vehicle_id>')
 @jwt_required()
 def get_last_inspection(vehicle_id):
-    try:
-        last_inspection = (
-            InspectionResult.query
-            .filter_by(vehicle_id=vehicle_id)
-            .order_by(InspectionResult.created_at.desc())
-            .first()
-        )
-        if not last_inspection:
-            return jsonify({"message": "No inspections found for this vehicle"}), 200
+    user = User.query.get(get_jwt_identity())
+    claims = get_jwt()
+    role = claims.get("role")
 
-        user = User.query.get(get_jwt_identity())
-        claims = get_jwt()
-        role = claims.get("role")
+    query = InspectionResult.query.filter_by(vehicle_id=vehicle_id).order_by(InspectionResult.created_at.desc())
+    if role == "driver":
+        query = filter_by_driver_access(query, user)
 
-        if role == "driver" and not driver_can_access(user, last_inspection):
-            return jsonify({"error": "Unauthorized"}), 403
+    last_inspection = query.first()
+    if not last_inspection:
+        return jsonify({"message": "No inspections found for this vehicle"}), 200
 
-        return jsonify(last_inspection.to_dict()), 200
-    except Exception as e:
-        return jsonify({"error": "Internal server error"}), 500
+    response = last_inspection.to_dict()
+    response["driver"] = {
+        "id": last_inspection.driver.id,
+        "first_name": last_inspection.driver.first_name,
+        "last_name": last_inspection.driver.last_name,
+        "full_name": f"{last_inspection.driver.first_name} {last_inspection.driver.last_name}"
+    } if last_inspection.driver else None
+
+    return jsonify(response), 200
 
 
 # -----------------------------
@@ -212,16 +228,22 @@ def get_vehicle_inspections(vehicle_id):
     role = claims.get("role")
 
     query = InspectionResult.query.filter_by(vehicle_id=vehicle_id).order_by(InspectionResult.created_at.desc())
-
     if role == "driver":
-        if user.org_id:
-            template_ids = db.session.query(Template.id).filter_by(org_id=user.org_id)
-            query = query.filter(InspectionResult.template_id.in_(template_ids))
-        else:
-            query = query.filter_by(driver_id=user.id)
+        query = filter_by_driver_access(query, user)
 
     inspections = query.all()
-    return jsonify([i.to_dict() for i in inspections]), 200
+    response = []
+    for insp in inspections:
+        item = insp.to_dict()
+        item["driver"] = {
+            "id": insp.driver.id,
+            "first_name": insp.driver.first_name,
+            "last_name": insp.driver.last_name,
+            "full_name": f"{insp.driver.first_name} {insp.driver.last_name}"
+        } if insp.driver else None
+        response.append(item)
+
+    return jsonify(response), 200
 
 
 # -----------------------------
