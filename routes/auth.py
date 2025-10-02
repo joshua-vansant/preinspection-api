@@ -85,12 +85,16 @@ def login():
     )
     refresh_token = create_refresh_token(identity=str(user.id))
 
+    user_dict = user.to_dict()
+    user_dict['role'] = role 
+
     return jsonify({
         "access_token": access_token,
         "refresh_token": refresh_token,
         "expires_in": 3600,
-        "user": user.to_dict()
+        "user": user_dict
     }), 200
+
 
 
 
