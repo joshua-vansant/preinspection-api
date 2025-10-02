@@ -64,7 +64,7 @@ def regenerate_org_code():
     if not org:
         return jsonify({"error": "Organization not found"}), 404
 
-    org.invite_code = str(uuid.uuid4())[:8]
+    org.invite_code = str(uuid4())[:8]
     db.session.commit()
 
     return jsonify({"invite_code": org.invite_code}), 200
