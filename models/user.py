@@ -16,7 +16,7 @@ class User(db.Model):
     last_name = db.Column(db.String(30), nullable=False)
     phone_number = db.Column(db.String(15), nullable=True)
 
-    def to_dict(self, include_org_id=True):
+    def to_dict(self, include_org=True):
         data = {
             "id": self.id,
             "email": self.email,
@@ -27,6 +27,8 @@ class User(db.Model):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
-        if include_org_id:
+        if self.org_id:
             data["org_id"] = self.org_id
+            if include_org and self.org:
+                data["org"] = self.org.to_dict()
         return data
