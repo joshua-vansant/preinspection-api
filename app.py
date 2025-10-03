@@ -26,7 +26,7 @@ def create_app():
     migrate.init_app(app, db)
     bcrypt.init_app(app)
     jwt.init_app(app)
-    socketio.init_app(app)
+    socketio.init_app(app, async_mode="eventlet")
 
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(templates_bp, url_prefix="/templates")

@@ -220,30 +220,30 @@ def get_last_inspection(vehicle_id):
 # -----------------------------
 # Get inspections for a vehicle
 # -----------------------------
-@inspections_bp.get('/vehicle/<int:vehicle_id>')
-@jwt_required()
-def get_vehicle_inspections(vehicle_id):
-    user = User.query.get(get_jwt_identity())
-    claims = get_jwt()
-    role = claims.get("role")
+# @inspections_bp.get('/vehicle/<int:vehicle_id>')
+# @jwt_required()
+# def get_vehicle_inspections(vehicle_id):
+#     user = User.query.get(get_jwt_identity())
+#     claims = get_jwt()
+#     role = claims.get("role")
 
-    query = InspectionResult.query.filter_by(vehicle_id=vehicle_id).order_by(InspectionResult.created_at.desc())
-    if role == "driver":
-        query = filter_by_driver_access(query, user)
+#     query = InspectionResult.query.filter_by(vehicle_id=vehicle_id).order_by(InspectionResult.created_at.desc())
+#     if role == "driver":
+#         query = filter_by_driver_access(query, user)
 
-    inspections = query.all()
-    response = []
-    for insp in inspections:
-        item = insp.to_dict()
-        item["driver"] = {
-            "id": insp.driver.id,
-            "first_name": insp.driver.first_name,
-            "last_name": insp.driver.last_name,
-            "full_name": f"{insp.driver.first_name} {insp.driver.last_name}"
-        } if insp.driver else None
-        response.append(item)
+#     inspections = query.all()
+#     response = []
+#     for insp in inspections:
+#         item = insp.to_dict()
+#         item["driver"] = {
+#             "id": insp.driver.id,
+#             "first_name": insp.driver.first_name,
+#             "last_name": insp.driver.last_name,
+#             "full_name": f"{insp.driver.first_name} {insp.driver.last_name}"
+#         } if insp.driver else None
+#         response.append(item)
 
-    return jsonify(response), 200
+#     return jsonify(response), 200
 
 
 # -----------------------------
