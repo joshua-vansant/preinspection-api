@@ -17,19 +17,25 @@ def get_templates():
     if not user:
         return jsonify({"error": "User not found"}), 404
 
+    # Unaffiliated driver: only default templates
     if user.org_id is None:
-        # Unaffiliated driver: only default templates
         templates = Template.query.filter_by(is_default=True).all()
+    # Admin: see all templates for their org
+    elif user.role == "admin":
+        templates = Template.query.filter_by(org_id=user.org_id).all()
+    # Driver in an org: see default templates + templates created by admins in their org
     else:
-        # Drivers in an org: default + org templates
+        # Get all admin IDs in the same org
+        admin_ids = [u.id for u in User.query.filter_by(org_id=user.org_id, role='admin').all()]
         templates = Template.query.filter(
             or_(
                 Template.is_default == True,
-                Template.org_id == user.org_id
+                Template.created_by.in_(admin_ids)
             )
         ).all()
 
     return jsonify([t.to_dict() for t in templates]), 200
+
 
 # POST create a template (admin only)
 @templates_bp.post('/create')
