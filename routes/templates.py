@@ -18,15 +18,15 @@ def get_templates():
         return jsonify({"error": "User not found"}), 404
 
     if user.org_id is None:
-        templates = Template.query.filter_by(org_id=None).all()
+        templates = Template.query.filter_by(org_id=None).order_by(Template.created_at.desc()).all()
     elif user.role == "admin":
-        templates = Template.query.filter_by(org_id=user.org_id).all()
+        templates = Template.query.filter_by(org_id=user.org_id).order_by(Template.is_default.desc(), Template.created_at.desc()).all()
     else:
         admin_ids = [u.id for u in User.query.filter_by(org_id=user.org_id, role='admin').all()]
         templates = Template.query.filter(
             Template.created_by.in_(admin_ids),
             Template.org_id == user.org_id
-        ).all()
+        ).order_by(Template.is_default.desc(), Template.created_at.desc()).all()
 
     return jsonify([t.to_dict() for t in templates]), 200
 
