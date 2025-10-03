@@ -15,6 +15,7 @@ class User(db.Model):
     first_name = db.Column(db.String(30), nullable=False)
     last_name = db.Column(db.String(30), nullable=False)
     phone_number = db.Column(db.String(15), nullable=True)
+    org = relationship("Organization", backref="users", lazy="joined")
 
     def to_dict(self, include_org=True):
         data = {
