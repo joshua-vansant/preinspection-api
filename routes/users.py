@@ -3,6 +3,7 @@ from extensions import db
 from models import User
 from flask_jwt_extended import jwt_required, get_jwt_identity
 import re
+from sockets.user_events import notify_user_updated
 
 users_bp = Blueprint("users", __name__)
 
@@ -64,6 +65,7 @@ def update_user():
     user.updated_at = db.func.now()
 
     db.session.commit()
+    notify_user_updated(user.org_id, user)
 
     return jsonify({"message": "User updated successfully", "user": user.to_dict()})
     
