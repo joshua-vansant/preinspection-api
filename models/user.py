@@ -1,5 +1,6 @@
 from extensions import db
 from datetime import datetime
+from sqlalchemy.orm import relationship
 
 class User(db.Model):
     __tablename__ = 'user'
