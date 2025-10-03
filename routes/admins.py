@@ -8,65 +8,65 @@ import secrets
 
 admins_bp = Blueprint("admins", __name__)
 
-@admins_bp.post('/create')
-@jwt_required()
-def create_admin():
-    current_user_id = get_jwt_identity()
-    user = User.query.get(current_user_id)
-    claims = get_jwt()
+# @admins_bp.post('/create')
+# @jwt_required()
+# def create_admin():
+#     current_user_id = get_jwt_identity()
+#     user = User.query.get(current_user_id)
+#     claims = get_jwt()
 
-    if claims.get("role") != "admin":
-        return jsonify({"error": "Only admins can create new admins"}), 403
+#     if claims.get("role") != "admin":
+#         return jsonify({"error": "Only admins can create new admins"}), 403
 
-    data = request.get_json()
-    email = data.get("email", "").strip().lower()
-    password = data.get("password", "")
+#     data = request.get_json()
+#     email = data.get("email", "").strip().lower()
+#     password = data.get("password", "")
 
-    if not email or not password:
-        return jsonify({"error": "Email and password are required"}), 400
+#     if not email or not password:
+#         return jsonify({"error": "Email and password are required"}), 400
 
-    if not is_valid_email(email):
-        return jsonify({"error": "Invalid email format"}), 400
+#     if not is_valid_email(email):
+#         return jsonify({"error": "Invalid email format"}), 400
 
-    if len(password) < 8:
-        return jsonify({"error": "Password must be at least 8 characters"}), 400
+#     if len(password) < 8:
+#         return jsonify({"error": "Password must be at least 8 characters"}), 400
 
-    if User.query.filter_by(email=email).first():
-        return jsonify({"error": "Email already registered"}), 400
+#     if User.query.filter_by(email=email).first():
+#         return jsonify({"error": "Email already registered"}), 400
 
-    password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
-    new_admin = User(email=email, password_hash=password_hash, org_id=user.org_id, role="admin")
+#     password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
+#     new_admin = User(email=email, password_hash=password_hash, org_id=user.org_id, role="admin")
 
-    db.session.add(new_admin)
-    db.session.commit()
+#     db.session.add(new_admin)
+#     db.session.commit()
 
-    return jsonify({
-        "message": "Admin user created successfully",
-        "user": new_admin.to_dict()
-    }), 201
+#     return jsonify({
+#         "message": "Admin user created successfully",
+#         "user": new_admin.to_dict()
+#     }), 201
 
 
-@admins_bp.post('/invite')
-@jwt_required()
-def generate_admin_invite():
-    current_user_id = get_jwt_identity()
-    user = User.query.get(current_user_id)
-    claims = get_jwt()
+# @admins_bp.post('/invite')
+# @jwt_required()
+# def generate_admin_invite():
+#     current_user_id = get_jwt_identity()
+#     user = User.query.get(current_user_id)
+#     claims = get_jwt()
 
-    if claims.get("role") != "admin":
-        return jsonify({"error": "Only admins can generate admin invites"}), 403
+#     if claims.get("role") != "admin":
+#         return jsonify({"error": "Only admins can generate admin invites"}), 403
 
-    # Generate a unique, random code
-    code = secrets.token_urlsafe(8)
+#     # Generate a unique, random code
+#     code = secrets.token_urlsafe(8)
 
-    org = Organization.query.get(user.org_id)
-    if not org:
-        return jsonify({"error": "Organization not found"}), 404
-    org.admin_invite_code = db.session.add(new_invite)
+#     org = Organization.query.get(user.org_id)
+#     if not org:
+#         return jsonify({"error": "Organization not found"}), 404
+#     org.admin_invite_code = db.session.add(new_invite)
     
-    db.session.commit()
+#     db.session.commit()
 
-    return jsonify({"code": code}), 201
+#     return jsonify({"code": code}), 201
 
 
 @admins_bp.post('/redeem')

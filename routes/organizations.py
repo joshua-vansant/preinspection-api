@@ -247,36 +247,36 @@ def leave_organization():
     return jsonify({"message": "Successfully left the organization"}), 200
 
 
-@organizations_bp.get("/admin_code")
-@jwt_required()
-def get_admin_invite_code():
-    user = User.query.get(get_jwt_identity())
-    if not user or user.role != "admin":
-        return jsonify({"error": "Only admins can generate admin codes"}), 403
+# @organizations_bp.get("/admin_code")
+# @jwt_required()
+# def get_admin_invite_code():
+#     user = User.query.get(get_jwt_identity())
+#     if not user or user.role != "admin":
+#         return jsonify({"error": "Only admins can generate admin codes"}), 403
 
-    org = Organization.query.get(user.org_id)
-    if not org:
-        return jsonify({"error": "Organization not found"}), 404
+#     org = Organization.query.get(user.org_id)
+#     if not org:
+#         return jsonify({"error": "Organization not found"}), 404
 
-    # Generate if missing
-    if not org.admin_invite_code:
-        org.admin_invite_code = str(uuid4()).split("-")[0].upper()
-        db.session.commit()
+#     # Generate if missing
+#     if not org.admin_invite_code:
+#         org.admin_invite_code = str(uuid4()).split("-")[0].upper()
+#         db.session.commit()
 
-    return jsonify({"admin_invite_code": org.admin_invite_code})
+#     return jsonify({"admin_invite_code": org.admin_invite_code})
 
 
-@organizations_bp.post("/admin_code/regenerate")
-@jwt_required()
-def regenerate_admin_code():
-    user = User.query.get(get_jwt_identity())
-    if not user or user.role != "admin":
-        return jsonify({"error": "Only admins can regenerate admin codes"}), 403
+# @organizations_bp.post("/admin_code/regenerate")
+# @jwt_required()
+# def regenerate_admin_code():
+#     user = User.query.get(get_jwt_identity())
+#     if not user or user.role != "admin":
+#         return jsonify({"error": "Only admins can regenerate admin codes"}), 403
 
-    org = Organization.query.get(user.org_id)
-    if not org:
-        return jsonify({"error": "Organization not found"}), 404
+#     org = Organization.query.get(user.org_id)
+#     if not org:
+#         return jsonify({"error": "Organization not found"}), 404
 
-    org.admin_invite_code = str(uuid4()).split("-")[0].upper()
-    db.session.commit()
-    return jsonify({"admin_invite_code": org.admin_invite_code})
+#     org.admin_invite_code = str(uuid4()).split("-")[0].upper()
+#     db.session.commit()
+#     return jsonify({"admin_invite_code": org.admin_invite_code})

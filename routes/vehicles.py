@@ -7,7 +7,7 @@ from models.user import User
 vehicles_bp = Blueprint("vehicles", __name__)
 
 # -----------------------------
-# GET all vehicles for user's org
+# GET all vehicles that user can see
 # -----------------------------
 @vehicles_bp.get('/')
 @jwt_required()
