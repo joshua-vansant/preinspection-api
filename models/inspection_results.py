@@ -11,7 +11,7 @@ class InspectionResult(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     driver_id = db.Column(db.Integer, db.ForeignKey('inspection_app.user.id'), nullable=True)
     driver = db.relationship("User", backref="inspections", lazy="joined")
-    vehicle_id = db.Column(db.Integer, db.ForeignKey('inspection_app.vehicles.id'), nullable=False)
+    vehicle_id = db.Column(db.Integer, db.ForeignKey('inspection_app.vehicles.id', ondelete="SET NULL"), nullable=True)
     template_id = db.Column(db.Integer, db.ForeignKey('inspection_app.templates.id'), nullable=True)
     template = db.relationship("Template", backref="inspection_results", lazy="joined")
     org_id = db.Column(db.Integer, db.ForeignKey('inspection_app.organizations.id'), nullable=True)
