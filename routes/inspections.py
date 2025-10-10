@@ -140,7 +140,7 @@ def get_inspection_history():
             return jsonify({"error": "Admin has no org"}), 400
         org_driver_ids = [id for (id,) in db.session.query(User.id).filter_by(org_id=user.org_id)]
         inspections = InspectionResult.query.filter(
-            (InspectionResult.driver_id.in_(org_driver_ids)) |
+            # (InspectionResult.driver_id.in_(org_driver_ids)) |
             (InspectionResult.org_id == user.org_id)
         ).all()
     else:
