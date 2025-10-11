@@ -13,22 +13,28 @@ from sockets import org_events
 import firebase_admin
 from firebase_admin import credentials, storage
 import os
+import json
 from routes.users import users_bp
 
 load_dotenv()
 
 def create_app():
     app = Flask(__name__)
+
     if not firebase_admin._apps:  # Prevent multiple initializations
-        cred = credentials.Certificate(os.getenv("FIREBASE_SERVICE_ACCOUNT_PATH"))
+        firebase_key = os.getenv("FIREBASE_SERVICE_ACCOUNT_KEY")
+        if not firebase_key:
+            raise ValueError("FIREBASE_SERVICE_ACCOUNT_KEY environment variable not set")
+
+        cred = credentials.Certificate(json.loads(firebase_key))
         firebase_admin.initialize_app(cred, {
-            "storageBucket": os.getenv("FIREBASE_STORAGE_BUCKET")
+            "storageBucket": "fleetcheck-db52c.firebasestorage.app"
         })
-    
+
     app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
-    
+
     db.init_app(app)
     migrate.init_app(app, db)
     bcrypt.init_app(app)
@@ -42,13 +48,13 @@ def create_app():
     app.register_blueprint(admins_bp, url_prefix="/admins")
     app.register_blueprint(vehicles_bp, url_prefix="/vehicles")
     app.register_blueprint(users_bp, url_prefix="/users")
-    
+
     @app.get('/')
     def index():
         return jsonify({"message": "Welcome to the Pre-Inspection API!"})
 
-
     return app
+
 
 app = create_app()
 
