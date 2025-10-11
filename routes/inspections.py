@@ -362,6 +362,10 @@ def upload_inspection_photo():
         driver_id=driver_id,
         url=photo_url
     )
+    
+    print("Uploading file:", file.filename)
+    print("Storage path:", storage_path)
+
     db.session.add(new_photo)
     db.session.commit()
 
