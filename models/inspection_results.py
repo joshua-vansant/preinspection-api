@@ -69,5 +69,6 @@ class InspectionResult(db.Model):
             "location": self.location,
             "completed_at": self.completed_at.isoformat() + "Z" if self.completed_at else None,
             "created_at": self.created_at.isoformat() + "Z" if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() + "Z" if self.updated_at else None
+            "updated_at": self.updated_at.isoformat() + "Z" if self.updated_at else None,
+            "photos": [photo.to_dict() for photo in self.photos] if self.photos else [],
         }

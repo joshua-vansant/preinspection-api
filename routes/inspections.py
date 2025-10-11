@@ -1,11 +1,15 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
+from firebase_admin import storage
+from werkzeug.utils import secure_filename
 from models.inspection_results import InspectionResult
 from models.template import Template
 from models.vehicle import Vehicle
 from models.user import User
+from models.inspection_photos import InspectionPhoto
 from extensions import db, socketio
 from datetime import datetime, timezone
+import uuid
 
 inspections_bp = Blueprint("inspections", __name__)
 
@@ -298,4 +302,56 @@ def update_inspection(inspection_id):
         vehicle.mileage = start_mileage
 
     db.session.commit()
+    return jsonify(inspection.to_dict()), 200
+
+    # -----------------------------
+    # Upload Photo
+    # -----------------------------
+@inspections_bp.post('/<int:inspection_id>/upload-photo')
+@jwt_required()
+def upload_inspection_photo(inspection_id):
+    driver_id = int(get_jwt_identity())
+
+    # Get the inspection
+    inspection = InspectionResult.query.get(inspection_id)
+    if not inspection:
+        return jsonify({"error": "Inspection not found"}), 404
+    print(f"JWT driver_id: {driver_id} ({type(driver_id)}), inspection.driver_id: {inspection.driver_id} ({type(inspection.driver_id)})")
+
+    # Check ownership
+    if inspection.driver_id != driver_id:
+        return jsonify({"error": "Unauthorized"}), 403
+
+    # Get the file
+    if 'file' not in request.files:
+        return jsonify({"error": "No file part in request"}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+
+    # Generate a safe, unique filename
+    filename = secure_filename(file.filename)
+    unique_filename = f"{uuid.uuid4().hex}_{filename}"
+
+    # Construct Firebase Storage path
+    org_id = inspection.org_id or 'no-org'
+    storage_path = f"orgs/{org_id}/inspections/{inspection.id}/{unique_filename}"
+
+    # Upload to Firebase Storage
+    bucket = storage.bucket()
+    blob = bucket.blob(storage_path)
+    blob.upload_from_file(file, content_type=file.content_type)
+
+    # Optional: get public URL
+    photo_url = blob.public_url
+
+    # Create a new InspectionPhoto record
+    new_photo = InspectionPhoto(
+        inspection_id=inspection.id,
+        driver_id=driver_id,
+        url=photo_url
+    )
+    db.session.add(new_photo)
+    db.session.commit()
+
     return jsonify(inspection.to_dict()), 200

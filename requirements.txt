@@ -8,3 +8,4 @@ flask-jwt-extended
 gunicorn
 Flask-SocketIO
 eventlet
+firebase_admin

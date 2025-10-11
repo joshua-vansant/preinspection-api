@@ -10,6 +10,8 @@ from routes.organizations import organizations_bp
 from routes.vehicles import vehicles_bp
 from dotenv import load_dotenv
 from sockets import org_events
+import firebase_admin
+from firebase_admin import credentials, storage
 import os
 from routes.users import users_bp
 
@@ -17,6 +19,11 @@ load_dotenv()
 
 def create_app():
     app = Flask(__name__)
+    if not firebase_admin._apps:  # Prevent multiple initializations
+        cred = credentials.Certificate(os.getenv("FIREBASE_SERVICE_ACCOUNT_PATH"))
+        firebase_admin.initialize_app(cred, {
+            "storageBucket": os.getenv("FIREBASE_STORAGE_BUCKET")
+        })
     
     app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
