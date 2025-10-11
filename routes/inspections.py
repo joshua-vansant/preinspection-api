@@ -304,58 +304,69 @@ def update_inspection(inspection_id):
     db.session.commit()
     return jsonify(inspection.to_dict()), 200
 
-    # -----------------------------
-    # Upload Photo
-    # -----------------------------
+# -----------------------------
+# Upload Photo
+# -----------------------------
 @inspections_bp.post('/upload-photo')
 @jwt_required()
 def upload_inspection_photo():
     driver_id = int(get_jwt_identity())
 
-    # Get optional inspection_id from form
+    # Optional fields
     inspection_id = request.form.get('inspection_id', type=int)
+    inspection_item_id = request.form.get('inspection_item_id', type=int)
 
-    # Get the file
+    # Validate file
     if 'file' not in request.files:
         return jsonify({"error": "No file part in request"}), 400
+
     file = request.files['file']
     if file.filename == '':
         return jsonify({"error": "No selected file"}), 400
 
-    # Generate a safe, unique filename
+    # Verify inspection exists (required)
+    if not inspection_id:
+        return jsonify({"error": "inspection_id is required"}), 400
+
+    inspection = InspectionResult.query.get(inspection_id)
+    if not inspection:
+        return jsonify({"error": "Inspection not found"}), 404
+
+    # Verify item belongs to the same template (if provided)
+    if inspection_item_id:
+        from models.template_items import TemplateItem  # adjust import path if needed
+        item = TemplateItem.query.get(inspection_item_id)
+        if not item:
+            return jsonify({"error": "Invalid inspection_item_id"}), 400
+        if item.template_id != inspection.template_id:
+            return jsonify({"error": "Item does not belong to inspection's template"}), 400
+
+    # Generate unique filename
     filename = secure_filename(file.filename)
     unique_filename = f"{uuid.uuid4().hex}_{filename}"
 
-    # Construct Firebase Storage path
-    if inspection_id:
-        inspection = InspectionResult.query.get(inspection_id)
-        if not inspection:
-            return jsonify({"error": "Inspection not found"}), 404
-        org_id = inspection.org_id or 'no-org'
-        storage_path = f"orgs/{org_id}/inspections/{inspection.id}/{unique_filename}"
-    else:
-        # Cache for driver without inspection yet
-        storage_path = f"orgs/no-org/drivers/{driver_id}/{unique_filename}"
+    org_id = inspection.org_id or 'no-org'
+    item_segment = f"items/{inspection_item_id}/" if inspection_item_id else ""
+    storage_path = f"orgs/{org_id}/inspections/{inspection.id}/{item_segment}{unique_filename}"
 
-    # Upload to Firebase Storage
+    # Upload to Firebase
     bucket = storage.bucket()
     blob = bucket.blob(storage_path)
     blob.upload_from_file(file, content_type=file.content_type)
-
-    # Optional: get public URL
     photo_url = blob.public_url
 
-    # Save to DB if inspection exists, otherwise just return URL for caching
-    if inspection_id:
-        new_photo = InspectionPhoto(
-            inspection_id=inspection_id,
-            driver_id=driver_id,
-            url=photo_url
-        )
-        db.session.add(new_photo)
-        db.session.commit()
+    # Save to DB
+    new_photo = InspectionPhoto(
+        inspection_id=inspection.id,
+        inspection_item_id=inspection_item_id,
+        driver_id=driver_id,
+        url=photo_url
+    )
+    db.session.add(new_photo)
+    db.session.commit()
 
     return jsonify({
         "photo_url": photo_url,
-        "inspection_id": inspection_id
+        "inspection_id": inspection.id,
+        "inspection_item_id": inspection_item_id
     }), 200
