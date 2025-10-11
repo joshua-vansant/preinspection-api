@@ -304,6 +304,36 @@ def update_inspection(inspection_id):
     db.session.commit()
     return jsonify(inspection.to_dict()), 200
 
+
+# -----------------------------
+# Start Inspection
+# -----------------------------
+@inspections_bp.post('/start')
+@jwt_required()
+def start_inspection():
+    driver_id = int(get_jwt_identity())
+    data = request.get_json()
+    vehicle_id = data.get('vehicle_id')
+    inspection_type = data.get('type', 'pre-trip')
+
+    if not vehicle_id:
+        return jsonify({"error": "vehicle_id is required"}), 400
+
+    inspection = InspectionResult(
+        driver_id=driver_id,
+        vehicle_id=vehicle_id,
+        type=inspection_type,
+        template_id=data.get('template_id'),
+        created_at=datetime.now(timezone.utc),
+        org_id=User.query.get(driver_id).org_id
+    )
+
+    db.session.add(inspection)
+    db.session.commit()
+
+    return jsonify({"inspection_id": inspection.id}), 201
+
+
 # -----------------------------
 # Upload Photo
 # -----------------------------
@@ -362,9 +392,9 @@ def upload_inspection_photo():
         driver_id=driver_id,
         url=photo_url
     )
-    
-    print("Uploading file:", file.filename)
-    print("Storage path:", storage_path)
+
+    print("DEBUG: Uploading file:", file.filename)
+    print("DEBUG: Storage path:", storage_path)
 
     db.session.add(new_photo)
     db.session.commit()
