@@ -86,7 +86,7 @@ def submit_inspection():
         vehicle_id=vehicle_id,
         template_id=template_id,
         type=inspection_type,
-        results=results,
+        results=results or {},
         created_at=datetime.now(timezone.utc),
         notes=notes,
         start_mileage=start_mileage,
@@ -121,7 +121,6 @@ def submit_inspection():
         )
 
     return jsonify(inspection_record.to_dict()), 201
-
 
 
 # -----------------------------
@@ -325,7 +324,8 @@ def start_inspection():
         type=inspection_type,
         template_id=data.get('template_id'),
         created_at=datetime.now(timezone.utc),
-        org_id=User.query.get(driver_id).org_id
+        org_id=User.query.get(driver_id).org_id,
+        results=data.get('results') or {}
     )
 
     db.session.add(inspection)

@@ -33,7 +33,9 @@ def create_app():
         except json.JSONDecodeError:
             cred = credentials.Certificate(firebase_key)
 
-
+        firebase_admin.initialize_app(cred, {
+            "storageBucket": "fleetcheck-db52c.firebasestorage.app"
+        })
 
     app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -58,6 +60,7 @@ def create_app():
         return jsonify({"message": "Welcome to the Pre-Inspection API!"})
 
     return app
+
 
 
 app = create_app()
