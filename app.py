@@ -26,10 +26,14 @@ def create_app():
         if not firebase_key:
             raise ValueError("FIREBASE_SERVICE_ACCOUNT_KEY environment variable not set")
 
-        cred = credentials.Certificate(json.loads(firebase_key))
-        firebase_admin.initialize_app(cred, {
-            "storageBucket": "fleetcheck-db52c.firebasestorage.app"
-        })
+        # Try to parse as JSON (Render) or treat as path (local)
+        try:
+            key_data = json.loads(firebase_key)
+            cred = credentials.Certificate(key_data)
+        except json.JSONDecodeError:
+            cred = credentials.Certificate(firebase_key)
+
+
 
     app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False

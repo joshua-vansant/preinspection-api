@@ -307,20 +307,13 @@ def update_inspection(inspection_id):
     # -----------------------------
     # Upload Photo
     # -----------------------------
-@inspections_bp.post('/<int:inspection_id>/upload-photo')
+@inspections_bp.post('/upload-photo')
 @jwt_required()
-def upload_inspection_photo(inspection_id):
+def upload_inspection_photo():
     driver_id = int(get_jwt_identity())
 
-    # Get the inspection
-    inspection = InspectionResult.query.get(inspection_id)
-    if not inspection:
-        return jsonify({"error": "Inspection not found"}), 404
-    print(f"JWT driver_id: {driver_id} ({type(driver_id)}), inspection.driver_id: {inspection.driver_id} ({type(inspection.driver_id)})")
-
-    # Check ownership
-    if inspection.driver_id != driver_id:
-        return jsonify({"error": "Unauthorized"}), 403
+    # Get optional inspection_id from form
+    inspection_id = request.form.get('inspection_id', type=int)
 
     # Get the file
     if 'file' not in request.files:
@@ -334,8 +327,15 @@ def upload_inspection_photo(inspection_id):
     unique_filename = f"{uuid.uuid4().hex}_{filename}"
 
     # Construct Firebase Storage path
-    org_id = inspection.org_id or 'no-org'
-    storage_path = f"orgs/{org_id}/inspections/{inspection.id}/{unique_filename}"
+    if inspection_id:
+        inspection = InspectionResult.query.get(inspection_id)
+        if not inspection:
+            return jsonify({"error": "Inspection not found"}), 404
+        org_id = inspection.org_id or 'no-org'
+        storage_path = f"orgs/{org_id}/inspections/{inspection.id}/{unique_filename}"
+    else:
+        # Cache for driver without inspection yet
+        storage_path = f"orgs/no-org/drivers/{driver_id}/{unique_filename}"
 
     # Upload to Firebase Storage
     bucket = storage.bucket()
@@ -345,13 +345,17 @@ def upload_inspection_photo(inspection_id):
     # Optional: get public URL
     photo_url = blob.public_url
 
-    # Create a new InspectionPhoto record
-    new_photo = InspectionPhoto(
-        inspection_id=inspection.id,
-        driver_id=driver_id,
-        url=photo_url
-    )
-    db.session.add(new_photo)
-    db.session.commit()
+    # Save to DB if inspection exists, otherwise just return URL for caching
+    if inspection_id:
+        new_photo = InspectionPhoto(
+            inspection_id=inspection_id,
+            driver_id=driver_id,
+            url=photo_url
+        )
+        db.session.add(new_photo)
+        db.session.commit()
 
-    return jsonify(inspection.to_dict()), 200
+    return jsonify({
+        "photo_url": photo_url,
+        "inspection_id": inspection_id
+    }), 200
