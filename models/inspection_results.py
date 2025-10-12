@@ -19,6 +19,7 @@ class InspectionResult(db.Model):
     results = db.Column(db.JSON, nullable=False)
     created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
     notes = db.Column(db.Text, nullable=True)
+    is_draft = db.Column(db.Boolean, default=True)
     status = db.Column(db.String(20), nullable=True)  # pass, fail, needs_repair
     start_mileage = db.Column(db.Integer, nullable=False)
     odometer_verified = db.Column(db.Boolean, default=False)
@@ -27,6 +28,7 @@ class InspectionResult(db.Model):
     location = db.Column(db.String(255), nullable=True)
     completed_at = db.Column(db.DateTime(timezone=True), nullable=True)
     updated_at = db.Column(db.DateTime, onupdate=datetime.utcnow)
+
 
     @staticmethod
     def last_for_vehicle(vehicle_id):
@@ -62,6 +64,7 @@ class InspectionResult(db.Model):
             "results": self.results,
             "status": self.status,
             "notes": self.notes,
+            "is_draft": self.is_draft,
             "start_mileage": self.start_mileage,
             "odometer_verified": self.odometer_verified,
             "fuel_level": self.fuel_level,

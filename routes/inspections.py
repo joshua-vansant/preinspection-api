@@ -71,7 +71,6 @@ def submit_inspection():
     if template.org_id is not None and driver.org_id != template.org_id:
         return jsonify({"error": "Template does not belong to your organization"}), 403
 
-
     # --- Mileage validation ---
     vehicle = Vehicle.query.get(vehicle_id)
     if vehicle:
@@ -101,6 +100,10 @@ def submit_inspection():
     # --- Update vehicle current mileage ---
     if vehicle:
         vehicle.mileage = start_mileage
+
+    inspection = InspectionResult.query.get(inspection_id)
+    if inspection:
+        inspection.is_draft = False
 
     db.session.commit()
 
