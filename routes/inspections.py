@@ -362,10 +362,14 @@ def upload_inspection_photo():
     if not inspection:
         return jsonify({"error": "Inspection not found"}), 404
 
+    print("DEBUG: Received inspection_id:", inspection_id)
+    print("DEBUG: Received inspection_item_id:", inspection_item_id)
+    print("DEBUG: inspection.template_id:", inspection.template_id)
     # Verify item belongs to the same template (if provided)
     if inspection_item_id:
         from models.template_item import TemplateItem 
         item = TemplateItem.query.get(inspection_item_id)
+        print("DEBUG: item.template_id:", getattr(item, 'template_id', None))
         if not item:
             return jsonify({"error": "Invalid inspection_item_id"}), 400
         if item.template_id != inspection.template_id:
