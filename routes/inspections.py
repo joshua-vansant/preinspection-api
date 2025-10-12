@@ -41,7 +41,7 @@ def filter_by_driver_access(query, user):
 def submit_inspection():
     data = request.get_json()
     driver_id = int(get_jwt_identity())
-    inspection_id = data.get('inspection_id')  # <-- draft inspection ID
+    inspection_id = data.get('inspection_id') 
     template_id = data.get('template_id')
     vehicle_id = data.get('vehicle_id')
     inspection_type = data.get('type')
@@ -326,24 +326,63 @@ def start_inspection():
     data = request.get_json()
     vehicle_id = data.get('vehicle_id')
     inspection_type = data.get('type', 'pre-trip')
+    template_id = data.get('template_id')
 
     if not vehicle_id:
         return jsonify({"error": "vehicle_id is required"}), 400
+
+    org_id = User.query.get(driver_id).org_id
+
+    
+
+    query = InspectionResult.query.filter_by(
+        driver_id=driver_id,
+        vehicle_id=vehicle_id,
+        is_draft=True
+    )
+
+    print("[DEBUG] Searching for existing draft with filters:",
+        f"driver_id={driver_id}, vehicle_id={vehicle_id}, template_id={template_id}")
+    print("[DEBUG] SQL filters applied:", str(query))
+
+    # Only include template_id filter if provided
+    if template_id is not None:
+        query = query.filter(InspectionResult.template_id == template_id)
+    else:
+        query = query.filter(InspectionResult.template_id.is_(None))
+
+    existing_draft = query.first()
+
+    if existing_draft:
+        print(f"[DEBUG] Existing draft found: {existing_draft.id}")
+        return jsonify({
+            "message": "Existing draft found, resuming inspection.",
+            "inspection_id": existing_draft.id
+        }), 200
+
+    print("[DEBUG] No existing draft found, creating new one")
 
     inspection = InspectionResult(
         driver_id=driver_id,
         vehicle_id=vehicle_id,
         type=inspection_type,
-        template_id=data.get('template_id'),
+        template_id=template_id,
         created_at=datetime.now(timezone.utc),
-        org_id=User.query.get(driver_id).org_id,
-        results=data.get('results') or {}
+        org_id=org_id,
+        results=data.get('results') or {},
+        is_draft=True,
     )
 
     db.session.add(inspection)
     db.session.commit()
 
-    return jsonify({"inspection_id": inspection.id}), 201
+    print(f"[DEBUG] New draft inspection created: {inspection.id}")
+
+    return jsonify({
+        "message": "New draft inspection created.",
+        "inspection_id": inspection.id
+    }), 201
+
 
 
 # -----------------------------
