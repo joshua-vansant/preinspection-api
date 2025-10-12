@@ -40,7 +40,8 @@ def filter_by_driver_access(query, user):
 @jwt_required()
 def submit_inspection():
     data = request.get_json()
-    driver_id = get_jwt_identity()
+    driver_id = int(get_jwt_identity())
+    inspection_id = data.get('inspection_id')  # <-- draft inspection ID
     template_id = data.get('template_id')
     vehicle_id = data.get('vehicle_id')
     inspection_type = data.get('type')
@@ -48,7 +49,7 @@ def submit_inspection():
     notes = data.get('notes')
     start_mileage = data.get("start_mileage")
 
-
+    # --- Basic validations ---
     if not template_id or not results or not vehicle_id or not inspection_type:
         return jsonify({"error": "template_id, vehicle_id, type, and results are required"}), 400
     if not isinstance(results, dict):
@@ -58,54 +59,64 @@ def submit_inspection():
     if start_mileage > 1000000:
         return jsonify({"error": "start_mileage seems too high"}), 400
 
-
     claims = get_jwt()
     if claims.get("role") != "driver":
         return jsonify({"error": "Only drivers can submit inspections"}), 403
 
+    # --- Template validation ---
     template = Template.query.get(template_id)
     if not template:
         return jsonify({"error": "Template not found"}), 404
-
     driver = User.query.get(driver_id)
     if template.org_id is not None and driver.org_id != template.org_id:
         return jsonify({"error": "Template does not belong to your organization"}), 403
 
-    # --- Mileage validation ---
+    # --- Vehicle / mileage validation ---
     vehicle = Vehicle.query.get(vehicle_id)
-    if vehicle:
-        if vehicle.mileage is not None:
-            if start_mileage < vehicle.mileage:
-                return jsonify({"error": "start_mileage cannot be less than vehicle's current mileage"}), 400
-        else:
-            print(f"[DEBUG] Vehicle {vehicle.id} has no mileage set, accepting {start_mileage} as first value.")
+    if vehicle and vehicle.mileage is not None and start_mileage < vehicle.mileage:
+        return jsonify({"error": "start_mileage cannot be less than vehicle's current mileage"}), 400
+    if vehicle and vehicle.mileage is None:
+        print(f"[DEBUG] Vehicle {vehicle.id} has no mileage, accepting {start_mileage} as first value.")
 
-    inspection_record = InspectionResult(
-        driver_id=driver_id,
-        vehicle_id=vehicle_id,
-        template_id=template_id,
-        type=inspection_type,
-        results=results or {},
-        created_at=datetime.now(timezone.utc),
-        notes=notes,
-        start_mileage=start_mileage,
-        fuel_level=data.get("fuel_level"),
-        fuel_notes=data.get("fuel_notes"),
-        odometer_verified=data.get("odometer_verified", False),
-        org_id=driver.org_id
-    )
+    # --- Fetch draft if provided, otherwise create new ---
+    if inspection_id:
+        inspection_record = InspectionResult.query.get(inspection_id)
+        if not inspection_record:
+            return jsonify({"error": "Draft inspection not found"}), 404
+        # Update existing draft
+        inspection_record.results = results
+        inspection_record.notes = notes
+        inspection_record.start_mileage = start_mileage
+        inspection_record.fuel_level = data.get("fuel_level")
+        inspection_record.fuel_notes = data.get("fuel_notes")
+        inspection_record.odometer_verified = data.get("odometer_verified", False)
+        inspection_record.is_draft = False
+    else:
+        # Create a new inspection if no draft exists
+        inspection_record = InspectionResult(
+            driver_id=driver_id,
+            vehicle_id=vehicle_id,
+            template_id=template_id,
+            type=inspection_type,
+            results=results or {},
+            created_at=datetime.now(timezone.utc),
+            notes=notes,
+            start_mileage=start_mileage,
+            fuel_level=data.get("fuel_level"),
+            fuel_notes=data.get("fuel_notes"),
+            odometer_verified=data.get("odometer_verified", False),
+            org_id=driver.org_id,
+            is_draft=False,
+        )
+        db.session.add(inspection_record)
 
-    db.session.add(inspection_record)
-
-    # --- Update vehicle current mileage ---
+    # --- Update vehicle mileage ---
     if vehicle:
         vehicle.mileage = start_mileage
 
-    inspection_record.is_draft = False
-
     db.session.commit()
 
-    # Socket emit
+    # --- Socket emit for org users ---
     if driver.org_id:
         socketio.emit(
             "inspection_created",
