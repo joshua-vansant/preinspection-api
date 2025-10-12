@@ -364,7 +364,7 @@ def upload_inspection_photo():
 
     # Verify item belongs to the same template (if provided)
     if inspection_item_id:
-        from models.template_items import TemplateItem  # adjust import path if needed
+        from models.template_item import TemplateItem 
         item = TemplateItem.query.get(inspection_item_id)
         if not item:
             return jsonify({"error": "Invalid inspection_item_id"}), 400
