@@ -101,9 +101,7 @@ def submit_inspection():
     if vehicle:
         vehicle.mileage = start_mileage
 
-    inspection = InspectionResult.query.get(inspection_id)
-    if inspection:
-        inspection.is_draft = False
+    inspection.is_draft = False
 
     db.session.commit()
 
