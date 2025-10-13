@@ -344,34 +344,27 @@ def start_inspection():
     driver_id = int(get_jwt_identity())
     data = request.get_json()
     vehicle_id = data.get('vehicle_id')
-    inspection_type = data.get('type', 'pre-trip')
     template_id = data.get('template_id')
 
     if not vehicle_id:
         return jsonify({"error": "vehicle_id is required"}), 400
 
-    org_id = User.query.get(driver_id).org_id
+    driver = User.query.get(driver_id)
+    org_id = driver.org_id
 
-    
-
+    # --- Check for existing draft first ---
     query = InspectionResult.query.filter_by(
         driver_id=driver_id,
         vehicle_id=vehicle_id,
         is_draft=True
     )
 
-    print("[DEBUG] Searching for existing draft with filters:",
-        f"driver_id={driver_id}, vehicle_id={vehicle_id}, template_id={template_id}")
-    print("[DEBUG] SQL filters applied:", str(query))
-
-    # Only include template_id filter if provided
     if template_id is not None:
         query = query.filter(InspectionResult.template_id == template_id)
     else:
         query = query.filter(InspectionResult.template_id.is_(None))
 
     existing_draft = query.first()
-
     if existing_draft:
         print(f"[DEBUG] Existing draft found: {existing_draft.id}")
         return jsonify({
@@ -379,8 +372,29 @@ def start_inspection():
             "inspection_id": existing_draft.id
         }), 200
 
-    print("[DEBUG] No existing draft found, creating new one")
+    print("[DEBUG] No existing draft found, determining inspection type...")
 
+    # --- Determine inspection type based on last non-draft inspection ---
+    last_inspection_query = InspectionResult.query.filter_by(
+        driver_id=driver_id,
+        vehicle_id=vehicle_id,
+        is_draft=False
+    )
+    if org_id:
+        last_inspection_query = last_inspection_query.filter_by(org_id=org_id)
+
+    last_inspection = last_inspection_query.order_by(
+        InspectionResult.created_at.desc()
+    ).first()
+
+    if not last_inspection:
+        inspection_type = 'pre-trip'
+    elif last_inspection.type.lower() == 'pre-trip':
+        inspection_type = 'post-trip'
+    else:
+        inspection_type = 'pre-trip'
+
+    # --- Create new draft inspection ---
     inspection = InspectionResult(
         driver_id=driver_id,
         vehicle_id=vehicle_id,
@@ -395,12 +409,14 @@ def start_inspection():
     db.session.add(inspection)
     db.session.commit()
 
-    print(f"[DEBUG] New draft inspection created: {inspection.id}")
+    print(f"[DEBUG] New draft inspection created: {inspection.id} with type {inspection_type}")
 
     return jsonify({
         "message": "New draft inspection created.",
-        "inspection_id": inspection.id
+        "inspection_id": inspection.id,
+        "type": inspection_type
     }), 201
+
 
 
 
