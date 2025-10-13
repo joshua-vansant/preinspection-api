@@ -92,7 +92,25 @@ def submit_inspection():
         inspection_record.odometer_verified = data.get("odometer_verified", False)
         inspection_record.is_draft = False
     else:
-        # Create a new inspection if no draft exists
+    # Look for an existing draft for this driver/vehicle/template
+    draft = InspectionResult.query.filter_by(
+        driver_id=driver_id,
+        vehicle_id=vehicle_id,
+        template_id=template_id,
+        is_draft=True
+    ).first()
+    if draft:
+        # Update the existing draft
+        draft.results = results
+        draft.notes = notes
+        draft.start_mileage = start_mileage
+        draft.fuel_level = data.get("fuel_level")
+        draft.fuel_notes = data.get("fuel_notes")
+        draft.odometer_verified = data.get("odometer_verified", False)
+        draft.is_draft = False
+        inspection_record = draft
+    else:
+        # No draft exists, create a new inspection
         inspection_record = InspectionResult(
             driver_id=driver_id,
             vehicle_id=vehicle_id,
@@ -109,6 +127,7 @@ def submit_inspection():
             is_draft=False,
         )
         db.session.add(inspection_record)
+
 
     # --- Update vehicle mileage ---
     if vehicle:
