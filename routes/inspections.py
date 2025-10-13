@@ -388,11 +388,11 @@ def start_inspection():
     ).first()
 
     if not last_inspection:
-        inspection_type = 'pre-trip'
-    elif last_inspection.type.lower() == 'pre-trip':
-        inspection_type = 'post-trip'
+        inspection_type = 'pre'
+    elif last_inspection.type.lower() == 'pre':
+        inspection_type = 'post'
     else:
-        inspection_type = 'pre-trip'
+        inspection_type = 'pre'
 
     # --- Create new draft inspection ---
     inspection = InspectionResult(
