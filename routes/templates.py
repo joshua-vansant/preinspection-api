@@ -22,10 +22,9 @@ def get_templates():
     elif user.role == "admin":
         templates = Template.query.filter_by(org_id=user.org_id).order_by(Template.is_default.desc(), Template.created_at.desc()).all()
     else:
-        admin_ids = [u.id for u in User.query.filter_by(org_id=user.org_id, role='admin').all()]
-        templates = Template.query.filter(
-            Template.created_by.in_(admin_ids),
-            Template.org_id == user.org_id
+        templates = Template.query.filter_by(org_id=user.org_id).order_by(
+            Template.is_default.desc(),
+            Template.created_at.desc()
         ).order_by(Template.is_default.desc(), Template.created_at.desc()).all()
 
     return jsonify([t.to_dict() for t in templates]), 200
