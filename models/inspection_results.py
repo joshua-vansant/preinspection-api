@@ -28,6 +28,9 @@ class InspectionResult(db.Model):
     location = db.Column(db.String(255), nullable=True)
     completed_at = db.Column(db.DateTime(timezone=True), nullable=True)
     updated_at = db.Column(db.DateTime, onupdate=datetime.utcnow)
+    driver_first_name = db.Column(db.String(50), nullable=True)
+    driver_last_name = db.Column(db.String(50), nullable=True)
+    driver_full_name = db.Column(db.String(100), nullable=True)
 
 
     @staticmethod
@@ -53,25 +56,46 @@ class InspectionResult(db.Model):
             raise ValueError("All inspections must include start_mileage.")
         return value
 
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "driver_id": self.driver_id,
-            "vehicle_id": self.vehicle_id,
-            "template_id": self.template_id,
-            "org_id": self.org_id,
-            "type": self.type,
-            "results": self.results,
-            "status": self.status,
-            "notes": self.notes,
-            "is_draft": self.is_draft,
-            "start_mileage": self.start_mileage,
-            "odometer_verified": self.odometer_verified,
-            "fuel_level": self.fuel_level,
-            "fuel_notes": self.fuel_notes,
-            "location": self.location,
-            "completed_at": self.completed_at.isoformat() + "Z" if self.completed_at else None,
-            "created_at": self.created_at.isoformat() + "Z" if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() + "Z" if self.updated_at else None,
-            "photos": [photo.to_dict() for photo in self.photos] if self.photos else [],
+def to_dict(self):
+    driver_info = None
+    if self.driver:
+        driver_info = {
+            "id": self.driver.id,
+            "first_name": self.driver.first_name,
+            "last_name": self.driver.last_name,
+            "full_name": f"{self.driver.first_name} {self.driver.last_name}"
         }
+    elif self.driver_first_name or self.driver_last_name or self.driver_full_name:
+        driver_info = {
+            "id": None,
+            "first_name": self.driver_first_name,
+            "last_name": self.driver_last_name,
+            "full_name": self.driver_full_name
+        }
+
+    return {
+        "id": self.id,
+        "driver_id": self.driver_id,
+        "vehicle_id": self.vehicle_id,
+        "template_id": self.template_id,
+        "org_id": self.org_id,
+        "type": self.type,
+        "results": self.results,
+        "status": self.status,
+        "notes": self.notes,
+        "is_draft": self.is_draft,
+        "start_mileage": self.start_mileage,
+        "odometer_verified": self.odometer_verified,
+        "fuel_level": self.fuel_level,
+        "fuel_notes": self.fuel_notes,
+        "location": self.location,
+        "completed_at": self.completed_at.isoformat() + "Z" if self.completed_at else None,
+        "created_at": self.created_at.isoformat() + "Z" if self.created_at else None,
+        "updated_at": self.updated_at.isoformat() + "Z" if self.updated_at else None,
+        "driver_first_name": self.driver_first_name,
+        "driver_last_name": self.driver_last_name,
+        "driver_full_name": self.driver_full_name,
+        "driver": driver_info,
+        "photos": [photo.to_dict() for photo in self.photos] if self.photos else [],
+    }
+

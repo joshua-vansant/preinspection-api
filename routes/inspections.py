@@ -75,10 +75,8 @@ def submit_inspection():
     vehicle = Vehicle.query.get(vehicle_id)
     if vehicle and vehicle.mileage is not None and start_mileage < vehicle.mileage:
         return jsonify({"error": "start_mileage cannot be less than vehicle's current mileage"}), 400
-    if vehicle and vehicle.mileage is None:
-        print(f"[DEBUG] Vehicle {vehicle.id} has no mileage, accepting {start_mileage} as first value.")
 
-    # Fetch draft if provided, otherwise create new 
+    # --- Create / update inspection ---
     if inspection_id:
         inspection_record = InspectionResult.query.get(inspection_id)
         if not inspection_record:
@@ -91,8 +89,12 @@ def submit_inspection():
         inspection_record.fuel_notes = data.get("fuel_notes")
         inspection_record.odometer_verified = data.get("odometer_verified", False)
         inspection_record.is_draft = False
+        # Populate driver snapshot
+        inspection_record.driver_first_name = driver.first_name
+        inspection_record.driver_last_name = driver.last_name
+        inspection_record.driver_full_name = f"{driver.first_name} {driver.last_name}"
     else:
-        # Look for an existing draft for this driver/vehicle/template
+        # Look for existing draft
         draft = InspectionResult.query.filter_by(
             driver_id=driver_id,
             vehicle_id=vehicle_id,
@@ -100,7 +102,6 @@ def submit_inspection():
             is_draft=True
         ).first()
         if draft:
-            # Update the existing draft
             draft.results = results
             draft.notes = notes
             draft.start_mileage = start_mileage
@@ -108,9 +109,11 @@ def submit_inspection():
             draft.fuel_notes = data.get("fuel_notes")
             draft.odometer_verified = data.get("odometer_verified", False)
             draft.is_draft = False
+            draft.driver_first_name = driver.first_name
+            draft.driver_last_name = driver.last_name
+            draft.driver_full_name = f"{driver.first_name} {driver.last_name}"
             inspection_record = draft
         else:
-            # No draft exists, create a new inspection
             inspection_record = InspectionResult(
                 driver_id=driver_id,
                 vehicle_id=vehicle_id,
@@ -125,9 +128,11 @@ def submit_inspection():
                 odometer_verified=data.get("odometer_verified", False),
                 org_id=driver.org_id,
                 is_draft=False,
+                driver_first_name=driver.first_name,
+                driver_last_name=driver.last_name,
+                driver_full_name=f"{driver.first_name} {driver.last_name}"
             )
             db.session.add(inspection_record)
-
 
     # Update vehicle mileage 
     if vehicle:
@@ -135,7 +140,7 @@ def submit_inspection():
 
     db.session.commit()
 
-    # Cleanup any leftover drafts for this driver/vehicle 
+    # Cleanup leftover drafts
     db.session.query(InspectionResult).filter(
         InspectionResult.driver_id == driver_id,
         InspectionResult.vehicle_id == vehicle_id,
@@ -143,19 +148,12 @@ def submit_inspection():
     ).delete()
     db.session.commit()
 
-
-    # Socket emit for org users 
+    # Socket emit
     if driver.org_id:
         socketio.emit(
             "inspection_created",
             {
-                **inspection_record.to_dict(),
-                "driver": {
-                    "id": driver.id,
-                    "first_name": driver.first_name,
-                    "last_name": driver.last_name,
-                    "full_name": f"{driver.first_name} {driver.last_name}"
-                }
+                inspection_record.to_dict(),
             },
             room=f"org_{driver.org_id}",
         )
@@ -175,32 +173,18 @@ def get_inspection_history():
     user = User.query.get(user_id)
 
     if role == "driver":
-        inspections_query = InspectionResult.query
-        inspections_query = filter_by_driver_access(inspections_query, user)
+        inspections_query = filter_by_driver_access(InspectionResult.query, user)
         inspections = inspections_query.all()
     elif role == "admin":
         if not user.org_id:
             return jsonify({"error": "Admin has no org"}), 400
-        org_driver_ids = [id for (id,) in db.session.query(User.id).filter_by(org_id=user.org_id)]
-        inspections = InspectionResult.query.filter(
-            # (InspectionResult.driver_id.in_(org_driver_ids)) |
-            (InspectionResult.org_id == user.org_id)
-        ).all()
+        inspections = InspectionResult.query.filter_by(org_id=user.org_id).all()
     else:
         return jsonify({"error": "Unauthorized role"}), 403
 
-    response = []
-    for insp in inspections:
-        item = insp.to_dict()
-        item["driver"] = {
-            "id": insp.driver.id,
-            "first_name": insp.driver.first_name,
-            "last_name": insp.driver.last_name,
-            "full_name": f"{insp.driver.first_name} {insp.driver.last_name}"
-        } if insp.driver else None
-        response.append(item)
-
+    response = [insp.to_dict() for insp in inspections]
     return jsonify(response), 200
+
 
 
 # --
@@ -220,17 +204,13 @@ def get_inspection(inspection_id):
     if role == "driver" and not driver_can_access(user, inspection):
         return jsonify({"error": "Unauthorized"}), 403
 
-    template = Template.query.get(inspection.template_id)
     response = inspection.to_dict()
-    response["template"] = template.to_dict() if template else None
-    response["driver"] = {
-        "id": inspection.driver.id,
-        "first_name": inspection.driver.first_name,
-        "last_name": inspection.driver.last_name,
-        "full_name": f"{inspection.driver.first_name} {inspection.driver.last_name}"
-    } if inspection.driver else None
+    template = Template.query.get(inspection.template_id)
+    if template:
+        response["template"] = template.to_dict()
 
     return jsonify(response), 200
+
 
 
 # --
@@ -251,44 +231,8 @@ def get_last_inspection(vehicle_id):
     if not last_inspection:
         return jsonify({"message": "No inspections found for this vehicle"}), 200
 
-    response = last_inspection.to_dict()
-    response["driver"] = {
-        "id": last_inspection.driver.id,
-        "first_name": last_inspection.driver.first_name,
-        "last_name": last_inspection.driver.last_name,
-        "full_name": f"{last_inspection.driver.first_name} {last_inspection.driver.last_name}"
-    } if last_inspection.driver else None
+    return jsonify(last_inspection.to_dict()), 200
 
-    return jsonify(response), 200
-
-
-# --
-# Get inspections for a vehicle
-# --
-# @inspections_bp.get('/vehicle/<int:vehicle_id>')
-# @jwt_required()
-# def get_vehicle_inspections(vehicle_id):
-#     user = User.query.get(get_jwt_identity())
-#     claims = get_jwt()
-#     role = claims.get("role")
-
-#     query = InspectionResult.query.filter_by(vehicle_id=vehicle_id).order_by(InspectionResult.created_at.desc())
-#     if role == "driver":
-#         query = filter_by_driver_access(query, user)
-
-#     inspections = query.all()
-#     response = []
-#     for insp in inspections:
-#         item = insp.to_dict()
-#         item["driver"] = {
-#             "id": insp.driver.id,
-#             "first_name": insp.driver.first_name,
-#             "last_name": insp.driver.last_name,
-#             "full_name": f"{insp.driver.first_name} {insp.driver.last_name}"
-#         } if insp.driver else None
-#         response.append(item)
-
-#     return jsonify(response), 200
 
 
 # --
@@ -361,13 +305,12 @@ def start_inspection():
     driver = User.query.get(driver_id)
     org_id = driver.org_id
 
-    # Check for existing draft first 
+    # Check for existing draft
     query = InspectionResult.query.filter_by(
         driver_id=driver_id,
         vehicle_id=vehicle_id,
         is_draft=True
     )
-
     if template_id is not None:
         query = query.filter(InspectionResult.template_id == template_id)
     else:
@@ -375,15 +318,12 @@ def start_inspection():
 
     existing_draft = query.first()
     if existing_draft:
-        print(f"[DEBUG] Existing draft found: {existing_draft.id}")
         return jsonify({
             "message": "Existing draft found, resuming inspection.",
             "inspection_id": existing_draft.id
         }), 200
 
-    print("[DEBUG] No existing draft found, determining inspection type...")
-
-    # Determine inspection type based on last non-draft inspection 
+    # Determine inspection type based on last inspection
     last_inspection_query = InspectionResult.query.filter_by(
         driver_id=driver_id,
         vehicle_id=vehicle_id,
@@ -403,7 +343,7 @@ def start_inspection():
     else:
         inspection_type = 'pre'
 
-    # Create new draft inspection 
+    # Create new draft inspection
     inspection = InspectionResult(
         driver_id=driver_id,
         vehicle_id=vehicle_id,
@@ -413,20 +353,19 @@ def start_inspection():
         org_id=org_id,
         results=data.get('results') or {},
         is_draft=True,
+        driver_first_name=driver.first_name,
+        driver_last_name=driver.last_name,
+        driver_full_name=f"{driver.first_name} {driver.last_name}"
     )
 
     db.session.add(inspection)
     db.session.commit()
-
-    print(f"[DEBUG] New draft inspection created: {inspection.id} with type {inspection_type}")
 
     return jsonify({
         "message": "New draft inspection created.",
         "inspection_id": inspection.id,
         "type": inspection_type
     }), 201
-
-
 
 
 # --
