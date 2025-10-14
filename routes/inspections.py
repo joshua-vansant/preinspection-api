@@ -153,10 +153,11 @@ def submit_inspection():
         socketio.emit(
             "inspection_created",
             {
-                inspection_record.to_dict(),
+                "inspection": inspection_record.to_dict()
             },
             room=f"org_{driver.org_id}",
         )
+
 
     return jsonify(inspection_record.to_dict()), 201
 
