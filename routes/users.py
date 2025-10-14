@@ -86,7 +86,10 @@ def delete_user():
     if org_id is None:
         # Solo driver → delete inspections and vehicles they created
         print("Solo driver branch")
-        InspectionResult.query.filter_by(driver_id=user.id).delete(synchronize_session=False)
+        InspectionResult.query.filter_by(driver_id=user.id, org_id=None).delete(synchronize_session=False)
+        InspectionResult.query.filter_by(driver_id=user.id).update(
+            {"driver_id": None}, synchronize_session=False
+        )
         Vehicle.query.filter_by(created_by_user_id=user.id).delete(synchronize_session=False)
     else:
         # Affiliated → keep inspections, reassign to org; vehicles remain but null out created_by_user_id
