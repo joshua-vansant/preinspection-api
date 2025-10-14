@@ -25,13 +25,8 @@ def driver_can_access(user, inspection):
 
 # Helper to filter queries by driver/org access
 def filter_by_driver_access(query, user):
-    if user.org_id:
-        return query.filter(
-            (InspectionResult.driver_id == user.id) |
-            ((InspectionResult.driver_id == None) & (InspectionResult.org_id == user.org_id))
-        )
-    else:
-        return query.filter_by(driver_id=user.id)
+    return query.filter(InspectionResult.driver_id == user.id)
+
 
 # --
 # Submit inspection
