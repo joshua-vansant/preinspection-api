@@ -33,9 +33,9 @@ def filter_by_driver_access(query, user):
     else:
         return query.filter_by(driver_id=user.id)
 
-# -----------------------------
+# --
 # Submit inspection
-# -----------------------------
+# --
 @inspections_bp.post('/submit')
 @jwt_required()
 def submit_inspection():
@@ -49,7 +49,7 @@ def submit_inspection():
     notes = data.get('notes')
     start_mileage = data.get("start_mileage")
 
-    # --- Basic validations ---
+    # Basic validations 
     if not template_id or not results or not vehicle_id or not inspection_type:
         return jsonify({"error": "template_id, vehicle_id, type, and results are required"}), 400
     if not isinstance(results, dict):
@@ -63,7 +63,7 @@ def submit_inspection():
     if claims.get("role") != "driver":
         return jsonify({"error": "Only drivers can submit inspections"}), 403
 
-    # --- Template validation ---
+    # Template validation 
     template = Template.query.get(template_id)
     if not template:
         return jsonify({"error": "Template not found"}), 404
@@ -71,14 +71,14 @@ def submit_inspection():
     if template.org_id is not None and driver.org_id != template.org_id:
         return jsonify({"error": "Template does not belong to your organization"}), 403
 
-    # --- Vehicle / mileage validation ---
+    # Vehicle / mileage validation 
     vehicle = Vehicle.query.get(vehicle_id)
     if vehicle and vehicle.mileage is not None and start_mileage < vehicle.mileage:
         return jsonify({"error": "start_mileage cannot be less than vehicle's current mileage"}), 400
     if vehicle and vehicle.mileage is None:
         print(f"[DEBUG] Vehicle {vehicle.id} has no mileage, accepting {start_mileage} as first value.")
 
-    # --- Fetch draft if provided, otherwise create new ---
+    # Fetch draft if provided, otherwise create new 
     if inspection_id:
         inspection_record = InspectionResult.query.get(inspection_id)
         if not inspection_record:
@@ -129,13 +129,22 @@ def submit_inspection():
             db.session.add(inspection_record)
 
 
-    # --- Update vehicle mileage ---
+    # Update vehicle mileage 
     if vehicle:
         vehicle.mileage = start_mileage
 
     db.session.commit()
 
-    # --- Socket emit for org users ---
+    # Cleanup any leftover drafts for this driver/vehicle 
+    db.session.query(InspectionResult).filter(
+        InspectionResult.driver_id == driver_id,
+        InspectionResult.vehicle_id == vehicle_id,
+        InspectionResult.is_draft == True
+    ).delete()
+    db.session.commit()
+
+
+    # Socket emit for org users 
     if driver.org_id:
         socketio.emit(
             "inspection_created",
@@ -154,9 +163,9 @@ def submit_inspection():
     return jsonify(inspection_record.to_dict()), 201
 
 
-# -----------------------------
+# --
 # Get inspection history
-# -----------------------------
+# --
 @inspections_bp.get('/history')
 @jwt_required()
 def get_inspection_history():
@@ -194,9 +203,9 @@ def get_inspection_history():
     return jsonify(response), 200
 
 
-# -----------------------------
+# --
 # Get single inspection
-# -----------------------------
+# --
 @inspections_bp.get('/<int:inspection_id>')
 @jwt_required()
 def get_inspection(inspection_id):
@@ -224,9 +233,9 @@ def get_inspection(inspection_id):
     return jsonify(response), 200
 
 
-# -----------------------------
+# --
 # Get last inspection for a vehicle
-# -----------------------------
+# --
 @inspections_bp.get('/last/<int:vehicle_id>')
 @jwt_required()
 def get_last_inspection(vehicle_id):
@@ -253,9 +262,9 @@ def get_last_inspection(vehicle_id):
     return jsonify(response), 200
 
 
-# -----------------------------
+# --
 # Get inspections for a vehicle
-# -----------------------------
+# --
 # @inspections_bp.get('/vehicle/<int:vehicle_id>')
 # @jwt_required()
 # def get_vehicle_inspections(vehicle_id):
@@ -282,9 +291,9 @@ def get_last_inspection(vehicle_id):
 #     return jsonify(response), 200
 
 
-# -----------------------------
+# --
 # Update inspection
-# -----------------------------
+# --
 @inspections_bp.put('/<int:inspection_id>')
 @jwt_required()
 def update_inspection(inspection_id):
@@ -309,7 +318,7 @@ def update_inspection(inspection_id):
     if start_mileage is None:
         return jsonify({"error": "start_mileage is required"}), 400
 
-    # --- Mileage validation ---
+    # Mileage validation 
     vehicle = Vehicle.query.get(inspection.vehicle_id)
     if vehicle and vehicle.mileage is not None:
         if start_mileage < vehicle.mileage:
@@ -335,9 +344,9 @@ def update_inspection(inspection_id):
     return jsonify(inspection.to_dict()), 200
 
 
-# -----------------------------
+# --
 # Start Inspection
-# -----------------------------
+# --
 @inspections_bp.post('/start')
 @jwt_required()
 def start_inspection():
@@ -352,7 +361,7 @@ def start_inspection():
     driver = User.query.get(driver_id)
     org_id = driver.org_id
 
-    # --- Check for existing draft first ---
+    # Check for existing draft first 
     query = InspectionResult.query.filter_by(
         driver_id=driver_id,
         vehicle_id=vehicle_id,
@@ -374,7 +383,7 @@ def start_inspection():
 
     print("[DEBUG] No existing draft found, determining inspection type...")
 
-    # --- Determine inspection type based on last non-draft inspection ---
+    # Determine inspection type based on last non-draft inspection 
     last_inspection_query = InspectionResult.query.filter_by(
         driver_id=driver_id,
         vehicle_id=vehicle_id,
@@ -394,7 +403,7 @@ def start_inspection():
     else:
         inspection_type = 'pre'
 
-    # --- Create new draft inspection ---
+    # Create new draft inspection 
     inspection = InspectionResult(
         driver_id=driver_id,
         vehicle_id=vehicle_id,
@@ -420,9 +429,9 @@ def start_inspection():
 
 
 
-# -----------------------------
+# --
 # Upload Photo
-# -----------------------------
+# --
 @inspections_bp.post('/upload-photo')
 @jwt_required()
 def upload_inspection_photo():
