@@ -28,9 +28,7 @@ def filter_by_driver_access(query, user):
     return query.filter(InspectionResult.driver_id == user.id)
 
 
-# --
 # Submit inspection
-# --
 @inspections_bp.post('/submit')
 @jwt_required()
 def submit_inspection():
@@ -71,7 +69,7 @@ def submit_inspection():
     if vehicle and vehicle.mileage is not None and start_mileage < vehicle.mileage:
         return jsonify({"error": "start_mileage cannot be less than vehicle's current mileage"}), 400
 
-    # --- Create / update inspection ---
+    # Create / update inspection
     if inspection_id:
         inspection_record = InspectionResult.query.get(inspection_id)
         if not inspection_record:
@@ -157,9 +155,8 @@ def submit_inspection():
     return jsonify(inspection_record.to_dict()), 201
 
 
-# --
+
 # Get inspection history
-# --
 @inspections_bp.get('/history')
 @jwt_required()
 def get_inspection_history():
@@ -174,7 +171,7 @@ def get_inspection_history():
     elif role == "admin":
         if not user.org_id:
             return jsonify({"error": "Admin has no org"}), 400
-        inspections = InspectionResult.query.filter_by(org_id=user.org_id).all()
+        inspections = InspectionResult.query.filter_by(org_id=user.org_id, is_draft=False).all()
     else:
         return jsonify({"error": "Unauthorized role"}), 403
 
