@@ -6,6 +6,8 @@ from models.password_reset_token import PasswordResetToken
 import re
 import uuid
 from datetime import datetime, timedelta
+from utils.email_service import send_reset_email
+
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -132,11 +134,13 @@ def request_password_reset():
     db.session.add(reset_entry)
     db.session.commit()
 
-    return jsonify({
-        "message": "Password reset requested. Use the token to reset your password.",
-        "reset_token": token,
-        "expires_at": expires_at.isoformat() + "Z"
-    }), 200
+    email_sent = send_reset_email(user.email, token)
+
+    if email_sent:
+        return jsonify({"message": "If an account exists, a reset link has been sent."}), 200
+    else:
+        return jsonify({"error": "Unable to send reset email"}), 500
+
 
 
 @auth_bp.post("/reset-password")
