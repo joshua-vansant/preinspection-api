@@ -2,7 +2,10 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity
 from extensions import db, bcrypt
 from models.user import User
+from models.password_reset_token import PasswordResetToken
 import re
+import uuid
+from datetime import datetime, timedelta
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -96,11 +99,71 @@ def login():
     }), 200
 
 
-
-
 @auth_bp.post('/refresh')
 @jwt_required(refresh=True)
 def refresh():
     current_user = get_jwt_identity()
     new_access_token = create_access_token(identity=current_user)
     return jsonify({"access_token": new_access_token, "expires_in": 3600}), 200
+
+
+@auth_bp.post("/request-password-reset")
+def request_password_reset():
+    data = request.get_json() or {}
+    email = data.get("email", "").strip().lower()
+
+    if not email:
+        return jsonify({"error": "Email is required"}), 400
+
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        return jsonify({"message": "If an account exists, a reset link has been sent."}), 200
+
+    PasswordResetToken.query.filter_by(user_id=user.id).delete()
+
+    token = str(uuid.uuid4())
+    expires_at = datetime.utcnow().replace(microsecond=0) + timedelta(minutes=30)
+    reset_entry = PasswordResetToken(
+        user_id=user.id,
+        token=token,
+        expires_at=expires_at
+    )
+
+    db.session.add(reset_entry)
+    db.session.commit()
+
+    return jsonify({
+        "message": "Password reset requested. Use the token to reset your password.",
+        "reset_token": token,
+        "expires_at": expires_at.isoformat() + "Z"
+    }), 200
+
+
+@auth_bp.post("/reset-password")
+def reset_password():
+    data = request.get_json() or {}
+    token = data.get("token")
+    new_password = data.get("new_password")
+
+    if not token or not new_password:
+        return jsonify({"error": "Token and new password are required"}), 400
+
+    reset_entry = PasswordResetToken.query.filter_by(token=token).first()
+
+    if not reset_entry:
+        return jsonify({"error": "Invalid or expired token"}), 400
+
+    if reset_entry.expires_at < datetime.utcnow():
+        db.session.delete(reset_entry)
+        db.session.commit()
+        return jsonify({"error": "Token has expired"}), 400
+
+    user = User.query.get(reset_entry.user_id)
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    user.password_hash = bcrypt.generate_password_hash(new_password).decode("utf-8")
+    db.session.delete(reset_entry)
+    db.session.commit()
+
+    return jsonify({"message": "Password reset successful"}), 200
