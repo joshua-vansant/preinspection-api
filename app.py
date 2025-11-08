@@ -15,6 +15,8 @@ from firebase_admin import credentials, storage
 import os
 import json
 from routes.users import users_bp
+from routes.misc import misc_bp
+
 
 load_dotenv()
 
@@ -53,7 +55,8 @@ def create_app():
     app.register_blueprint(organizations_bp, url_prefix="/organizations")
     app.register_blueprint(admins_bp, url_prefix="/admins")
     app.register_blueprint(vehicles_bp, url_prefix="/vehicles")
-    app.register_blueprint(users_bp, url_prefix="/users")
+    app.register_blueprint(users_bp, url_prefix="/users")   
+    app.register_blueprint(misc_bp)
 
     @app.get('/')
     def index():
