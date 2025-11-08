@@ -148,7 +148,7 @@ def reset_password_landing():
         return "Invalid or missing token.", 400
 
     # Triggers Android’s app link immediately
-    app_link = f"https://preinspection-api.onrender.com/reset-password?token={token}"
+    app_link = f"https://preinspection-api.onrender.com/auth/reset-password?token={token}"
 
     html = f"""
     <html>
