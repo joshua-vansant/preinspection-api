@@ -231,10 +231,15 @@ def deep_reset_redirect():
         }};
       </script>
     </head>
-    <body style="font-family: sans-serif; text-align: center; padding-top: 40px;">
-      <h2>Opening DriveCheck...</h2>
-      <p>If nothing happens, open the app manually or download it below:</p>
-      <a href="https://play.google.com/store/apps/details?id=com.jmvs.inspectionapp">Open Play Store</a>
+    <body style="background-color:#fff; margin:0;">
+        <script>
+            window.onload = function() {
+            window.location = "drivecheck://reset-password?token={token}";
+            setTimeout(() => {
+                window.location = "https://play.google.com/store/apps/details?id=com.jmvs.inspectionapp";
+            }, 1500);
+            };
+        </script>
     </body>
     </html>
     """
