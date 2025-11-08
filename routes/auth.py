@@ -141,6 +141,16 @@ def request_password_reset():
     else:
         return jsonify({"error": "Unable to send reset email"}), 500
 
+@auth_bp.get("/reset-password")
+def reset_password_landing():
+    token = request.args.get("token")
+    if not token:
+        return jsonify({"error": "Missing token"}), 400
+
+    return jsonify({
+        "message": "Password reset link verified.",
+        "token": token
+    }), 200
 
 
 @auth_bp.post("/reset-password")
