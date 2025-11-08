@@ -140,28 +140,45 @@ def request_password_reset():
         return jsonify({"message": "If an account exists, a reset link has been sent."}), 200
     else:
         return jsonify({"error": "Unable to send reset email"}), 500
+        
 
 @auth_bp.get("/reset-password")
 def reset_password_landing():
     token = request.args.get("token")
     if not token:
-        return "Invalid or missing token.", 400
-
-    # Triggers Android’s app link immediately
-    app_link = f"https://preinspection-api.onrender.com/auth/reset-password?token={token}"
+        return jsonify({"error": "Missing token"}), 400
 
     html = f"""
-    <html>
-      <head>
-        <meta http-equiv="refresh" content="0; url={app_link}" />
-      </head>
-      <body>
-        <p>If your app doesn’t open automatically, 
-        <a href="{app_link}">tap here to open DriveCheck</a>.</p>
-      </body>
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>DriveCheck Password Reset</title>
+        <script>
+            // Try to open the app via App Link
+            window.onload = function() {{
+                var deepLink = "https://preinspection-api.onrender.com/auth/reset-password?token={token}";
+                window.location.replace(deepLink);
+            }};
+        </script>
+        <style>
+            body {{
+                font-family: sans-serif;
+                text-align: center;
+                padding-top: 50px;
+                background-color: #fafafa;
+            }}
+        </style>
+    </head>
+    <body>
+        <h2>Opening DriveCheck...</h2>
+        <p>If nothing happens, open your app manually and reset your password.</p>
+    </body>
     </html>
     """
     return html
+
 
 
 
