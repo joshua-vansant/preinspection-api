@@ -13,7 +13,7 @@ def send_reset_email(to_email: str, token: str) -> bool:
         return False
 
     # reset_link = f"{FRONTEND_RESET_URL}?token={token}"
-    reset_link = f"https://preinspection-api.onrender.com/reset-password?token={token}"
+    reset_link = f"https://preinspection-api.onrender.com/auth/reset-password?token={token}"
 
     subject = "Reset Your DriveCheck Password"
     html_content = f"""
