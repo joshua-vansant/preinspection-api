@@ -140,7 +140,7 @@ def request_password_reset():
         return jsonify({"message": "If an account exists, a reset link has been sent."}), 200
     else:
         return jsonify({"error": "Unable to send reset email"}), 500
-        
+
 
 @auth_bp.get("/reset-password")
 def reset_password_landing():
@@ -180,8 +180,6 @@ def reset_password_landing():
     return html
 
 
-
-
 @auth_bp.post("/reset-password")
 def reset_password():
     data = request.get_json() or {}
@@ -210,3 +208,33 @@ def reset_password():
     db.session.commit()
 
     return jsonify({"message": "Password reset successful"}), 200
+
+
+@auth_bp.get("/deep-reset")
+def deep_reset_redirect():
+    token = request.args.get("token")
+    if not token:
+        return "Invalid reset link", 400
+
+    return f"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <title>Opening DriveCheck...</title>
+      <script>
+        window.onload = function() {{
+          window.location = "drivecheck://reset-password?token={token}";
+          setTimeout(() => {{
+            window.location = "https://play.google.com/store/apps/details?id=com.jmvs.inspectionapp";
+          }}, 2000);
+        }};
+      </script>
+    </head>
+    <body style="font-family: sans-serif; text-align: center; padding-top: 40px;">
+      <h2>Opening DriveCheck...</h2>
+      <p>If nothing happens, open the app manually or download it below:</p>
+      <a href="https://play.google.com/store/apps/details?id=com.jmvs.inspectionapp">Open Play Store</a>
+    </body>
+    </html>
+    """
