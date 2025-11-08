@@ -12,7 +12,8 @@ def send_reset_email(to_email: str, token: str) -> bool:
         print("SENDGRID_API_KEY not configured")
         return False
 
-    reset_link = f"{FRONTEND_RESET_URL}?token={token}"
+    # reset_link = f"{FRONTEND_RESET_URL}?token={token}"
+    reset_link = f"https://preinspection-api.onrender.com/reset-password?token={token}"
 
     subject = "Reset Your DriveCheck Password"
     html_content = f"""
