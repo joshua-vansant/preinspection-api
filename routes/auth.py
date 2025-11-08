@@ -233,12 +233,12 @@ def deep_reset_redirect():
     </head>
     <body style="background-color:#fff; margin:0;">
         <script>
-            window.onload = function() {
+            window.onload = function() {{
             window.location = "drivecheck://reset-password?token={token}";
-            setTimeout(() => {
+            setTimeout(() => {{
                 window.location = "https://play.google.com/store/apps/details?id=com.jmvs.inspectionapp";
-            }, 1500);
-            };
+            }}, 1500);
+            }};
         </script>
     </body>
     </html>
