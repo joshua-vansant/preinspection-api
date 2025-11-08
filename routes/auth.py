@@ -145,12 +145,24 @@ def request_password_reset():
 def reset_password_landing():
     token = request.args.get("token")
     if not token:
-        return jsonify({"error": "Missing token"}), 400
+        return "Invalid or missing token.", 400
 
-    return jsonify({
-        "message": "Password reset link verified.",
-        "token": token
-    }), 200
+    # Triggers Android’s app link immediately
+    app_link = f"https://preinspection-api.onrender.com/reset-password?token={token}"
+
+    html = f"""
+    <html>
+      <head>
+        <meta http-equiv="refresh" content="0; url={app_link}" />
+      </head>
+      <body>
+        <p>If your app doesn’t open automatically, 
+        <a href="{app_link}">tap here to open DriveCheck</a>.</p>
+      </body>
+    </html>
+    """
+    return html
+
 
 
 @auth_bp.post("/reset-password")
