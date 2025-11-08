@@ -1,6 +1,6 @@
 import os
 from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail
+from sendgrid.helpers.mail import Mail, TrackingSettings, ClickTracking
 
 SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
 FROM_EMAIL = os.getenv("SENDGRID_FROM_EMAIL")
@@ -40,6 +40,12 @@ def send_reset_email(to_email: str, token: str) -> bool:
         html_content=html_content
     )
 
+    # Disable click tracking so link stays exact
+    tracking_settings = TrackingSettings(
+        click_tracking=ClickTracking(enable=False, enable_text=False)
+    )
+    message.tracking_settings = tracking_settings
+    
     try:
         sg = SendGridAPIClient(SENDGRID_API_KEY)
         response = sg.send(message)
